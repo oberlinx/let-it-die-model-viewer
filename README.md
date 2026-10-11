@@ -19,6 +19,9 @@ The pictures in `img/` are renders of the game's own meshes and textures, produc
 - `render.html` + `serve.py <dump-dir> <image-dir> <port>` – three.js harness that renders every model
   (skin, underwear overlay and hair, as the game's material does), with and without the gas mask and saves the WebP files.
 
+- `voices.py <out-dir>` – copies five sample voice clips per model, in English and Japanese, out of the game's voice packages
+  (they are stored as Ogg Vorbis, so nothing is re-encoded). These are the files in `voice/`.
+
 For the decal catalogue:
 
 - `decals.py <out-dir>` – reads `master_skill` and its related tables, resolves the English text, and dumps each decal's

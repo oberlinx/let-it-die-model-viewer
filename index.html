@@ -75,6 +75,11 @@
     position: absolute; left: 8px; top: 6px; font-size: 11px; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: 1px;
   }
+  .voice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--panel-border); }
+  .voice .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .clips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .clips button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer; }
+  .clips button:hover { border-color: var(--accent-bright); }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 14px 0 0; font-size: 13px; }
   dt { color: var(--text-faint); }
   dd { margin: 0; overflow-wrap: anywhere; }
@@ -107,7 +112,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in its reference pose with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting.</p>
+    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in its reference pose with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The taunt type is the id stored for the model, not a decoded animation.</p>
     <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -121,30 +126,39 @@
   <div class="dlg-body">
     <div class="views" id="d-views"></div>
     <dl id="d-info"></dl>
+    <div class="voice">
+      <span class="lbl">Voice samples</span>
+      <div class="clips" id="d-clips"></div>
+      <div class="seg"><div class="btns" id="d-lang" data-seg="lang"><button data-v="en" aria-pressed="true">English</button><button data-v="jp" aria-pressed="false">Japanese</button></div></div>
+      <span class="id" id="d-clip-note"></span>
+    </div>
   </div>
 </dialog>
 
 <script>
 const MODELS = [
-  { id: 'BODY_FEMALE_001', label: 'Female 1', gender: 'female', body: 'SK_CH_Main_NormalFemale', hair: 'SK_CH_Equip_NF_Hair0001' },
-  { id: 'BODY_FEMALE_002', label: 'Female 2', gender: 'female', body: 'SK_CH_Main_NormalFemale0002', hair: 'SK_CH_Equip_NF_Hair0002' },
-  { id: 'BODY_FEMALE_003', label: 'Female 3', gender: 'female', body: 'SK_CH_Main_NormalFemale0003', hair: 'SK_CH_Equip_NF_Hair0003' },
-  { id: 'BODY_FEMALE_004', label: 'Female 4', gender: 'female', body: 'SK_CH_Main_NormalFemale0004', hair: 'SK_CH_Equip_NF_Hair0004' },
-  { id: 'BODY_FEMALE_005', label: 'Female 5', gender: 'female', body: 'SK_CH_Main_NormalFemale0005', hair: 'SK_CH_Equip_NF_Hair0005' },
-  { id: 'BODY_FEMALE_006', label: 'Female 6', gender: 'female', body: 'SK_CH_Main_NormalFemale0006', hair: 'SK_CH_Equip_NF_Hair0006' },
-  { id: 'BODY_FEMALE_007', label: 'Female 7', gender: 'female', body: 'SK_CH_Main_NormalFemale0007', hair: 'SK_CH_Equip_NF_Hair0007' },
-  { id: 'BODY_FEMALE_008', label: 'Female 8', gender: 'female', body: 'SK_CH_Main_NormalFemale0008', hair: 'SK_CH_Equip_NF_Hair0008' },
-  { id: 'BODY_MALE_001', label: 'Male 1', gender: 'male', body: 'SK_CH_Main_NormalMale', hair: null },
-  { id: 'BODY_MALE_002', label: 'Male 2', gender: 'male', body: 'SK_CH_Main_NormalMale0002', hair: null },
-  { id: 'BODY_MALE_003', label: 'Male 3', gender: 'male', body: 'SK_CH_Main_NormalMale0003', hair: 'SK_CH_Equip_NM_Hair0001' },
-  { id: 'BODY_MALE_004', label: 'Male 4', gender: 'male', body: 'SK_CH_Main_NormalMale0004', hair: 'SK_CH_Equip_NM_Hair0002' },
-  { id: 'BODY_MALE_005', label: 'Male 5', gender: 'male', body: 'SK_CH_Main_NormalMale0005', hair: 'SK_CH_Equip_NM_Hair0003' },
-  { id: 'BODY_MALE_006', label: 'Male 6', gender: 'male', body: 'SK_CH_Main_NormalMale0006', hair: null },
-  { id: 'BODY_MALE_007', label: 'Male 7', gender: 'male', body: 'SK_CH_Main_NormalMale0007', hair: 'SK_CH_Equip_NM_Hair0007' },
-  { id: 'BODY_MALE_008', label: 'Male 8', gender: 'male', body: 'SK_CH_Main_NormalMale0008', hair: 'SK_CH_Equip_NM_Hair0008' },
+  { id: 'BODY_FEMALE_001', voice: 'F01', voiceb: 5, provoke: 1, label: 'Female 1', gender: 'female', body: 'SK_CH_Main_NormalFemale', hair: 'SK_CH_Equip_NF_Hair0001' },
+  { id: 'BODY_FEMALE_002', voice: 'F02', voiceb: 5, provoke: 4, label: 'Female 2', gender: 'female', body: 'SK_CH_Main_NormalFemale0002', hair: 'SK_CH_Equip_NF_Hair0002' },
+  { id: 'BODY_FEMALE_003', voice: 'F03', voiceb: 6, provoke: 7, label: 'Female 3', gender: 'female', body: 'SK_CH_Main_NormalFemale0003', hair: 'SK_CH_Equip_NF_Hair0003' },
+  { id: 'BODY_FEMALE_004', voice: 'F04', voiceb: 6, provoke: 10, label: 'Female 4', gender: 'female', body: 'SK_CH_Main_NormalFemale0004', hair: 'SK_CH_Equip_NF_Hair0004' },
+  { id: 'BODY_FEMALE_005', voice: 'F05', voiceb: 7, provoke: 13, label: 'Female 5', gender: 'female', body: 'SK_CH_Main_NormalFemale0005', hair: 'SK_CH_Equip_NF_Hair0005' },
+  { id: 'BODY_FEMALE_006', voice: 'F06', voiceb: 7, provoke: 16, label: 'Female 6', gender: 'female', body: 'SK_CH_Main_NormalFemale0006', hair: 'SK_CH_Equip_NF_Hair0006' },
+  { id: 'BODY_FEMALE_007', voice: 'F07', voiceb: 8, provoke: 19, label: 'Female 7', gender: 'female', body: 'SK_CH_Main_NormalFemale0007', hair: 'SK_CH_Equip_NF_Hair0007' },
+  { id: 'BODY_FEMALE_008', voice: 'F08', voiceb: 8, provoke: 22, label: 'Female 8', gender: 'female', body: 'SK_CH_Main_NormalFemale0008', hair: 'SK_CH_Equip_NF_Hair0008' },
+  { id: 'BODY_MALE_001', voice: 'M01', voiceb: 1, provoke: 1, label: 'Male 1', gender: 'male', body: 'SK_CH_Main_NormalMale', hair: null },
+  { id: 'BODY_MALE_002', voice: 'M02', voiceb: 1, provoke: 4, label: 'Male 2', gender: 'male', body: 'SK_CH_Main_NormalMale0002', hair: null },
+  { id: 'BODY_MALE_003', voice: 'M03', voiceb: 2, provoke: 7, label: 'Male 3', gender: 'male', body: 'SK_CH_Main_NormalMale0003', hair: 'SK_CH_Equip_NM_Hair0001' },
+  { id: 'BODY_MALE_004', voice: 'M04', voiceb: 2, provoke: 10, label: 'Male 4', gender: 'male', body: 'SK_CH_Main_NormalMale0004', hair: 'SK_CH_Equip_NM_Hair0002' },
+  { id: 'BODY_MALE_005', voice: 'M05', voiceb: 3, provoke: 13, label: 'Male 5', gender: 'male', body: 'SK_CH_Main_NormalMale0005', hair: 'SK_CH_Equip_NM_Hair0003' },
+  { id: 'BODY_MALE_006', voice: 'M06', voiceb: 3, provoke: 16, label: 'Male 6', gender: 'male', body: 'SK_CH_Main_NormalMale0006', hair: null },
+  { id: 'BODY_MALE_007', voice: 'M07', voiceb: 4, provoke: 19, label: 'Male 7', gender: 'male', body: 'SK_CH_Main_NormalMale0007', hair: 'SK_CH_Equip_NM_Hair0007' },
+  { id: 'BODY_MALE_008', voice: 'M08', voiceb: 4, provoke: 22, label: 'Male 8', gender: 'male', body: 'SK_CH_Main_NormalMale0008', hair: 'SK_CH_Equip_NM_Hair0008' },
 ];
+// Sample voice clips shipped in voice/<id>_<en|jp>_<key>.ogg
+const CLIPS = { attack: 'Attack', hurt: 'Hurt', rage: 'Rage', alert: 'Alert', death: 'Death' };
 const VIEWS = { face: 'Face', side: 'Angle', body: 'Body', back: 'Back' };
-const state = { filter: 'all', view: 'face', mask: 'on', open: -1 };
+const state = { filter: 'all', view: 'face', mask: 'on', lang: 'en', open: -1 };
+let playing = null;
 const $ = id => document.getElementById(id);
 const img = (m, v) => `img/${m.id}_${v}${state.mask === 'off' && v !== 'back' ? '_nomask' : ''}.webp`;
 const shown = () => MODELS.filter(m => state.filter === 'all' || m.gender === state.filter);
@@ -178,9 +192,19 @@ function openModel(i) {
     `<figure><img alt="${m.label} ${VIEWS[v].toLowerCase()} view" src="${img(m, v)}"><figcaption>${VIEWS[v]}</figcaption></figure>`).join('');
   $('d-info').innerHTML = [
     ['Editor label', m.label], ['Save id', m.id], ['Body mesh', m.body], ['Hair mesh', m.hair || 'none (hair is part of the body)'],
+    ['Voice', `Set ${m.voice}, used by this model only (voice group ${m.voiceb})`],
+    ['Taunt', `Type ${m.provoke}, shared with ${m.gender === 'female' ? 'Male' : 'Female'} ${Number(m.id.slice(-3))}`],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  $('d-clips').innerHTML = Object.keys(CLIPS).map(k => `<button data-clip="${k}">&#9654; ${CLIPS[k]}</button>`).join('');
+  stopClip();
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + m.id);
+}
+function stopClip() { if (playing) { playing.pause(); playing = null; } }
+function playClip(key) {
+  stopClip();
+  playing = new Audio(`voice/${MODELS[state.open].id}_${state.lang}_${key}.ogg`);
+  playing.play().catch(() => { $('d-clip-note').textContent = 'This browser could not play the clip (Ogg Vorbis audio).'; });
 }
 function step(d) {
   const list = shown().map(m => MODELS.indexOf(m));
@@ -202,6 +226,8 @@ bindSeg('filter', 'filter');
 bindSeg('view', 'view');
 bindSeg('mask', 'mask');
 bindSeg('d-mask', 'mask');
+bindSeg('d-lang', 'lang');
+$('d-clips').addEventListener('click', e => { const b = e.target.closest('[data-clip]'); if (b) playClip(b.dataset.clip); });
 $('d-close').addEventListener('click', () => closeDlg());
 $('d-prev').addEventListener('click', () => step(-1));
 $('d-next').addEventListener('click', () => step(1));
@@ -211,8 +237,8 @@ $('dlg').addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') step(1);
 });
 const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
-const closeDlg = () => { $('dlg').close(); clearHash(); };
-$('dlg').addEventListener('close', clearHash);
+const closeDlg = () => { stopClip(); $('dlg').close(); clearHash(); };
+$('dlg').addEventListener('close', () => { stopClip(); clearHash(); });
 // #BODY_FEMALE_003 in the address opens that model (the save editor links here this way)
 function openFromHash() {
   const i = MODELS.findIndex(m => m.id === decodeURIComponent(location.hash.slice(1)));
