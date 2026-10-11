@@ -48,14 +48,13 @@
   .card { background: var(--panel); border: 1px solid var(--panel-border); padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; min-width: 0; }
   .card:hover, .card:focus-visible { border-color: var(--accent-bright); outline: none; }
   .card .shot { background: var(--stage); aspect-ratio: 1; padding: 10px; }
-  /* Premium decals: the game's holographic foil, clipped to the sticker's own shape. --m is the icon, set when the
-     card scrolls into view so off-screen icons are not downloaded early. */
+  /* Premium decals: the game's holographic foil, clipped to the sticker's own shape. --m is the icon, set once the
+     card's own image has loaded. */
   .foilBox { position: relative; width: 100%; height: 100%; }
   .foil { position: absolute; inset: 0; pointer-events: none; opacity: 0.4; mix-blend-mode: hard-light;
     background: url(img/foil.jpg) var(--fx, 50%) var(--fy, 50%) / 240% auto;
     -webkit-mask: var(--m, none) center / 100% 100% no-repeat; mask: var(--m, none) center / 100% 100% no-repeat; }
-  /* not yet given its icon: hidden, but still laid out so the scroll watcher can see it */
-  .foil:not([style*="--m"]) { visibility: hidden; }
+  .foil:not([style*="--m"]) { display: none; }
   body.nofoil .foil { display: none; }
   .card img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .card .meta { padding: 7px 9px 8px; border-top: 1px solid var(--panel-border); }
@@ -145,9 +144,11 @@ const tags = d => (d.premium ? '<span class="tag prem">Premium</span>' : '') + (
 const num = n => Number(n).toLocaleString('en-US');
 // foilPos(): a spot on the foil sheet that is fixed for each decal, so neighbours do not all show the same colours
 function foilPos(d) { return `--fx:${(d.no * 37) % 101}%;--fy:${(d.no * 61) % 101}%`; }
-const foilWatch = new IntersectionObserver(es => {
-  for (const e of es) if (e.isIntersecting) { e.target.style.cssText = `--m:url(${e.target.dataset.m});${e.target.dataset.pos}`; foilWatch.unobserve(e.target); }
-}, { rootMargin: '300px' });
+// A card's foil is switched on when its (lazily loaded) icon arrives, so off-screen icons are not fetched early.
+function armFoil(e) {
+  const f = e.target.nextElementSibling;
+  if (f && f.classList.contains('foil') && f.dataset.m) f.style.cssText = `--m:url(${f.dataset.m});${f.dataset.pos}`;
+}
 
 function filtered() {
   const q = state.q.trim().toLowerCase();
@@ -170,7 +171,6 @@ function renderGrid() {
     `<button class="card" data-id="${d.id}"><div class="shot"><div class="foilBox"><img loading="lazy" alt="" src="${img(d)}">${d.premium ? `<i class="foil" data-m="${img(d)}" data-pos="${foilPos(d)}"></i>` : ''}</div></div>
       <div class="meta"><div class="name">${esc(d.name)}</div><div>${stars(d.rarity)}${tags(d)}</div></div></button>`).join('')
     : '<div class="empty">No decals match these filters.</div>';
-  for (const f of $('grid').querySelectorAll('.foil')) foilWatch.observe(f);
 }
 
 function openDecal(id) {
@@ -219,6 +219,7 @@ $('cat').addEventListener('change', e => { state.cat = e.target.value; renderGri
 $('sort').addEventListener('change', e => { state.sort = e.target.value; renderGrid(); });
 $('ps').addEventListener('change', e => { state.ps = e.target.checked; renderGrid(); });
 $('foil').addEventListener('change', e => document.body.classList.toggle('nofoil', !e.target.checked));
+$('grid').addEventListener('load', armFoil, true);
 $('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openDecal(c.dataset.id); });
 $('d-close').addEventListener('click', closeDlg);
 $('d-prev').addEventListener('click', () => step(-1));
