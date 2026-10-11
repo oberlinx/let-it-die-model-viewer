@@ -13,7 +13,9 @@ def load(name, kind, t):
 
 def pack(info):
     name = info['name']
-    pos, nrm, uv, idx = load(name, 'pos', 'f'), load(name, 'nrm', 'f'), load(name, 'uv', 'f'), load(name, 'idx', 'I')
+    # posed vertices from pose.py when present, else the reference (T) pose
+    pre = 'pose.' if os.path.exists(os.path.join(SRC, name + '.pose.pos.bin')) else ''
+    pos, nrm, uv, idx = load(name, pre + 'pos', 'f'), load(name, pre + 'nrm', 'f'), load(name, 'uv', 'f'), load(name, 'idx', 'I')
     nv = len(pos) // 3
     assert nv < 65536
     n8 = array('b')

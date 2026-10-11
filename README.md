@@ -35,6 +35,10 @@ For the decal catalogue:
 - `decal-icons.html` (served by `serve.py`) – converts those raw icons to WebP and builds the sprite sheet the save editor embeds;
   `data/decals.js` is the catalogue data.
 
-Models are shown in their reference pose and lit outside the game engine, so colours are close to but not identical to in-game.
+- `pose.py <dump-dir> [sequence] [0..1]` – skins every mesh with one frame of a game animation (default: the first frame of
+  the neutral idle, `ANI_CH_IDL_Neutral`), using the skeleton and skin weights `extract.py` writes. The renderer and `pack3d.py`
+  pick up the posed vertices automatically.
+
+Models are shown in the game's idle stance and lit outside the game engine, so colours are close to but not identical to in-game.
 
 Unofficial fan project. LET IT DIE and its character art belong to their respective rights holders.

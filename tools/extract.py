@@ -28,8 +28,10 @@ def read_mesh(p, e):
     r.fs(7)
     mats = [p.objname(r.i32()) for _ in range(r.i32())]
     r.fs(3); r.p += 12
+    bones = []
     for _ in range(r.i32()):
-        r.p += 8 + 4 + 28 + 8 + 4
+        name = p.fname(r); r.u32(); quat = r.fs(4); bpos = r.fs(3); r.i32(); parent = r.i32(); r.u32()
+        bones.append([name, parent] + list(quat) + list(bpos))
     r.i32()
     assert r.i32() >= 1
     secs = []
@@ -39,10 +41,13 @@ def read_mesh(p, e):
     r.u32(); r.u8(); es = r.i32(); n = r.i32()
     idx = array('H' if es == 2 else 'I', r.raw(es * n))
     n_ = r.i32(); r.p += 2 * n_
+    chunks = []
     for _ in range(r.i32()):
-        r.u32()
+        cbase = r.u32()
         assert r.i32() == 0 and r.i32() == 0, 'cpu verts present'
-        n_ = r.i32(); r.p += 2 * n_; r.p += 12
+        bonemap = [r.u16() for _ in range(r.i32())]
+        nrig = r.i32(); nsoft = r.i32(); r.i32()
+        chunks.append((cbase, nrig + nsoft, bonemap))
     r.u32(); nv = r.u32()
     n_ = r.i32(); r.p += n_
     fl = r.u32(); cnt = r.i32(); size = r.u64(); off = r.u64()
@@ -52,15 +57,22 @@ def read_mesh(p, e):
     es = r.i32(); n = r.i32()
     assert n == nv, (n, nv)
     uvf = 'f' if full else 'e'
-    st = struct.Struct('<4x3Bx8x3f' + '2' + uvf + '%dx' % ((ntc - 1) * (8 if full else 4)))
+    st = struct.Struct('<4x3Bx4B4B3f' + '2' + uvf + '%dx' % ((ntc - 1) * (8 if full else 4)))
     assert st.size == es, (st.size, es, ntc, full, packed)
-    pos = array('f'); nrm = array('f'); uv = array('f')
+    pos = array('f'); nrm = array('f'); uv = array('f'); skin = bytearray()
+    # each vertex's bone indices are local to its chunk: look them up in that chunk's bone map
+    vmap = [None] * n
+    for cbase, cnum, bonemap in chunks:
+        for i in range(cbase, cbase + cnum): vmap[i] = bonemap
+    vi = 0
     # UE3 (left-handed, up = -Y here) -> right-handed Y-up: negate Y (winding then already reads counter-clockwise)
-    for nx, ny, nz, x, y, z, u, v in st.iter_unpack(r.raw(es * n)):
+    for nx, ny, nz, b0, b1, b2, b3, w0, w1, w2, w3, x, y, z, u, v in st.iter_unpack(r.raw(es * n)):
         pos.extend((x, -y, z)); nrm.extend((nx / 127.5 - 1, -(ny / 127.5 - 1), nz / 127.5 - 1)); uv.extend((u, v))
+        bm = vmap[vi]; vi += 1
+        skin.extend((bm[b0], bm[b1], bm[b2], bm[b3], w0, w1, w2, w3))
     tri = array('I', idx)
     groups = [dict(mat=mats[mi], start=int(base), count=int(nt) * 3) for mi, base, nt in secs]
-    return dict(pos=pos, nrm=nrm, uv=uv, idx=tri, groups=groups)
+    return dict(pos=pos, nrm=nrm, uv=uv, idx=tri, groups=groups, skin=skin, bones=bones)
 
 _tfc = {}
 def read_tex(p, e, max_size=2048):
@@ -150,8 +162,9 @@ def export_mesh(path):
     print('mesh', name, 'verts', len(m['pos']) // 3, 'tris', len(m['idx']) // 3, 'from', os.path.basename(p.path))
     for k in ('pos', 'nrm', 'uv', 'idx'):
         m[k].tofile(open(os.path.join(OUT, '%s.%s.bin' % (name, k)), 'wb'))
+    open(os.path.join(OUT, name + '.skin.bin'), 'wb').write(m['skin'])    # per vertex: 4 bone indices, 4 weights (0-255)
     xs = m['pos'][0::3]; ys = m['pos'][1::3]; zs = m['pos'][2::3]
-    info = dict(name=name, verts=len(m['pos']) // 3, groups=[], min=[min(xs), min(ys), min(zs)], max=[max(xs), max(ys), max(zs)])
+    info = dict(name=name, verts=len(m['pos']) // 3, bones=m['bones'], groups=[], min=[min(xs), min(ys), min(zs)], max=[max(xs), max(ys), max(zs)])
     for g in m['groups']:
         mp, me = find_export(g['mat'], 'MaterialInstanceConstant', pkgs)
         mat = dict(name=g['mat'])

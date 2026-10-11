@@ -59,7 +59,9 @@ async function loadTex(t, srgb) {
   tex.anisotropy = 8; tex.needsUpdate = true;
   return tex;
 }
-async function bin(name, kind, T) { return new T(await (await fetch(`${name}.${kind}.bin`)).arrayBuffer()); }
+// ?tpose renders the reference pose; otherwise the posed vertices written by pose.py are used
+const POSED = !Q.has('tpose');
+async function bin(name, kind, T) { return new T(await (await fetch(`${name}.${POSED && (kind === 'pos' || kind === 'nrm') ? 'pose.' : ''}${kind}.bin`)).arrayBuffer()); }
 
 async function buildMesh(info, opts) {
   const g = new THREE.BufferGeometry();
@@ -126,7 +128,7 @@ const VIEWS = {
   face: { target: [0, 166, 0], dist: 105, w: 600, h: 600, fov: 30 },
   wide: { target: [0, 91, 0], dist: 400, w: 800, h: 800, fov: 28 },
   thumb: { target: [0, 167.5, 0], dist: 70, w: 480, h: 480, fov: 30 },
-  body: { target: [0, 91, 0], dist: 400, w: 400, h: 800, fov: 28 },
+  body: { target: [0, 90, 0], dist: 400, w: 400, h: 800, fov: 28 },
 };
 async function show(id, view, yaw, nomask) {
   const m = models.find(x => x.id === id);
@@ -141,8 +143,11 @@ async function show(id, view, yaw, nomask) {
   if (m.hair && !Q.has('nohair')) root.add(await buildMesh(m.hair, { kind: 'hair', model: m }));
   root.rotation.y = (yaw || 0) * Math.PI / 180;
   camera = new THREE.PerspectiveCamera(v.fov, v.w / v.h, 1, 2000);
-  camera.position.set(v.target[0], v.target[1], v.target[2] + v.dist);
-  camera.lookAt(...v.target);
+  // posed models: aim head shots at the posed head bone, from slightly below because the idle stance looks down
+  const head = POSED && m.pose && /face|thumb/.test(view || '') ? m.pose.head : null;
+  const target = head ? [head[0], head[1] + 3, head[2]] : v.target, up = head ? -0.14 : 0;
+  camera.position.set(target[0], target[1] + Math.sin(up) * v.dist, target[2] + Math.cos(up) * v.dist);
+  camera.lookAt(...target);
   renderer.render(scene, camera);
   return m.label;
 }
@@ -221,6 +226,26 @@ async function bakeTextures(size, hairOnly) {
     }
   }
   await fetch('/save/done.png', { method: 'POST', body: 'x' });
+}
+// Link-preview image (og.jpg, 1200x630): title over a row of eight faces.
+async function shareCard() {
+  const c = document.createElement('canvas'); c.width = 1200; c.height = 630;
+  const x = c.getContext('2d'), g = x.createRadialGradient(600, 250, 50, 600, 315, 700);
+  g.addColorStop(0, '#34373e'); g.addColorStop(1, '#0d0d0f'); x.fillStyle = g; x.fillRect(0, 0, 1200, 630);
+  const ids = ['BODY_FEMALE_001', 'BODY_MALE_004', 'BODY_FEMALE_005', 'BODY_MALE_002', 'BODY_FEMALE_007', 'BODY_MALE_005', 'BODY_FEMALE_002', 'BODY_MALE_008'];
+  x.imageSmoothingQuality = 'high';
+  for (let i = 0; i < ids.length; i++) {
+    for (const k in texCache) delete texCache[k];
+    await show(ids[i], 'thumb', 0);
+    x.drawImage(renderer.domElement, i * 150, 200, 150, 150);
+    x.drawImage(renderer.domElement, i * 150, 200, 150, 150);
+  }
+  x.fillStyle = '#e8e8e8'; x.font = 'bold 64px Georgia, serif'; x.fillText('LET IT DIE', 60, 120);
+  x.fillStyle = '#d6392c'; x.fillText('Fighter Models', 60 + x.measureText('LET IT DIE ').width, 120);
+  x.fillStyle = '#9a9a9a'; x.font = '28px Consolas, monospace';
+  x.fillText('All 16 models: looks, voices, taunts and a 3D view', 60, 440);
+  x.fillText('368 skill decals: icons, effects and sources', 60, 485);
+  await fetch('/save/og.jpg', { method: 'POST', body: await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88)) });
 }
 async function renderThumbs() {
   for (const m of models) {
