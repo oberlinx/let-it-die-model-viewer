@@ -18,6 +18,10 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+  nav.pages { display: flex; gap: 6px; margin-bottom: 18px; }
+  nav.pages a { color: var(--text-dim); text-decoration: none; font-size: 12px; padding: 5px 12px; border: 1px solid var(--panel-border); background: var(--bg-raised); }
+  nav.pages a:hover { color: var(--text); }
+  nav.pages a[aria-current] { color: #fff; border-color: var(--accent); background: var(--accent); }
   header h1 { font-family: var(--display); font-size: 30px; letter-spacing: 0.5px; margin: 0 0 4px; }
   header h1 span { color: var(--accent-bright); }
   header p { margin: 0; color: var(--text-dim); max-width: 70ch; }
@@ -82,6 +86,7 @@
 </head>
 <body>
 <div class="wrap">
+  <nav class="pages"><a href="./" aria-current="page">Fighter Models</a><a href="decals.html">Skill Decals</a></nav>
   <header>
     <h1>LET IT DIE <span>Fighter Models</span></h1>
     <p>The game never shows a name for its 16 fighter bodies. This page pairs each internal model id with what it looks like, rendered from the game's own meshes and textures.</p>

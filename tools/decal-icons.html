@@ -1,0 +1,55 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>decal icon converter</title>
+<body style="background:#333;color:#ddd;font:12px sans-serif">
+<script>
+// Converts the raw icons dumped by decals.py into WebP files and a sprite atlas, POSTing them to serve.py.
+function dxt5(buf, w, h) {
+  const dv = new DataView(buf), out = new Uint8ClampedArray(w * h * 4), a = new Uint8Array(8), c = new Uint8Array(12);
+  let p = 0;
+  for (let by = 0; by < h; by += 4) for (let bx = 0; bx < w; bx += 4) {
+    a[0] = dv.getUint8(p); a[1] = dv.getUint8(p + 1);
+    if (a[0] > a[1]) for (let i = 1; i < 7; i++) a[i + 1] = ((7 - i) * a[0] + i * a[1]) / 7;
+    else { for (let i = 1; i < 5; i++) a[i + 1] = ((5 - i) * a[0] + i * a[1]) / 5; a[6] = 0; a[7] = 255; }
+    const alo = dv.getUint16(p + 2, true) | (dv.getUint8(p + 4) << 16), ahi = dv.getUint16(p + 5, true) | (dv.getUint8(p + 7) << 16);
+    const c0 = dv.getUint16(p + 8, true), c1 = dv.getUint16(p + 10, true); let bits = dv.getUint32(p + 12, true); p += 16;
+    c[0] = (c0 >> 11) * 255 / 31; c[1] = ((c0 >> 5) & 63) * 255 / 63; c[2] = (c0 & 31) * 255 / 31;
+    c[3] = (c1 >> 11) * 255 / 31; c[4] = ((c1 >> 5) & 63) * 255 / 63; c[5] = (c1 & 31) * 255 / 31;
+    for (let k = 0; k < 3; k++) { c[6 + k] = (2 * c[k] + c[3 + k]) / 3; c[9 + k] = (c[k] + 2 * c[3 + k]) / 3; }
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+      const i = (bits & 3) * 3, k = y * 4 + x, o = ((by + y) * w + bx + x) * 4; bits >>>= 2;
+      out[o] = c[i]; out[o + 1] = c[i + 1]; out[o + 2] = c[i + 2];
+      out[o + 3] = a[k < 8 ? (alo >> (3 * k)) & 7 : (ahi >> (3 * (k - 8))) & 7];
+    }
+  }
+  return out;
+}
+async function icon(name, info) {
+  const buf = await (await fetch(name + '.' + info.fmt)).arrayBuffer(), n = info.size;
+  let px;
+  if (info.fmt === 'dxt5') px = dxt5(buf, n, n);
+  else { px = new Uint8ClampedArray(buf.slice(0)); for (let i = 0; i < px.length; i += 4) { const b = px[i]; px[i] = px[i + 2]; px[i + 2] = b; } }
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  c.getContext('2d').putImageData(new ImageData(px, n, n), 0, 0);
+  return c;
+}
+const post = async (name, canvas, type, q) => fetch('/save/' + name, { method: 'POST', body: await new Promise(r => canvas.toBlob(r, type, q)) });
+async function run(cell, cols) {
+  const icons = await (await fetch('icons.json')).json(), names = Object.keys(icons).sort();
+  const atlas = document.createElement('canvas'); atlas.width = cols * cell; atlas.height = Math.ceil(names.length / cols) * cell;
+  const ax = atlas.getContext('2d'); ax.imageSmoothingQuality = 'high';
+  const sheet = document.createElement('canvas'); sheet.width = 20 * 80; sheet.height = Math.ceil(names.length / 20) * 80;
+  const sx = sheet.getContext('2d'); sx.fillStyle = '#2a2d33'; sx.fillRect(0, 0, sheet.width, sheet.height); sx.imageSmoothingQuality = 'high';
+  let i = 0;
+  for (const name of names) {
+    const c = await icon(name, icons[name]);
+    await post(name + '.webp', c, 'image/webp', 0.86);
+    ax.drawImage(c, (i % cols) * cell, Math.floor(i / cols) * cell, cell, cell);
+    sx.drawImage(c, (i % 20) * 80, Math.floor(i / 20) * 80, 80, 80); i++;
+  }
+  await post('atlas_' + cell + '.webp', atlas, 'image/webp', 0.86);
+  await post('sheet.jpg', sheet, 'image/jpeg', 0.85);
+  await fetch('/save/atlas_order.png', { method: 'POST', body: JSON.stringify({ cell, cols, names }) });
+  await fetch('/save/done.png', { method: 'POST', body: 'x' });
+}
+</script>
