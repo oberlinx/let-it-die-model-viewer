@@ -48,6 +48,14 @@
   .card { background: var(--panel); border: 1px solid var(--panel-border); padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; min-width: 0; }
   .card:hover, .card:focus-visible { border-color: var(--accent-bright); outline: none; }
   .card .shot { background: var(--stage); aspect-ratio: 1; padding: 10px; }
+  /* Premium decals: the game's holographic foil, clipped to the sticker's own shape. --m is the icon, set when the
+     card scrolls into view so off-screen icons are not downloaded early. */
+  .foilBox { position: relative; width: 100%; height: 100%; }
+  .foil { position: absolute; inset: 0; pointer-events: none; opacity: 0.4; mix-blend-mode: hard-light;
+    background: url(img/foil.jpg) var(--fx, 50%) var(--fy, 50%) / 240% auto;
+    -webkit-mask: var(--m, none) center / 100% 100% no-repeat; mask: var(--m, none) center / 100% 100% no-repeat; }
+  .foil:not([style*="--m"]) { display: none; }
+  body.nofoil .foil { display: none; }
   .card img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .card .meta { padding: 7px 9px 8px; border-top: 1px solid var(--panel-border); }
   .card .name { font-size: 12.5px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
@@ -100,13 +108,14 @@
     <label class="seg"><span class="lbl">Category</span><select id="cat"><option value="">All</option></select></label>
     <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="no">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option></select></label>
     <label class="chk"><input type="checkbox" id="ps" checked> PlayStation-only</label>
+    <label class="chk"><input type="checkbox" id="foil" checked> Premium foil</label>
   </div>
   <div id="count"></div>
 
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_skill</code> tables and the icons from its UI packages; a premium decal shares its art with the normal version. Numbers in the descriptions are filled in from the decal's stored values. The id shown for each decal is the key the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a> uses.</p>
+    <p>Data comes from the game's <code>master_skill</code> tables and the icons from its UI packages; a premium decal shares its art with the normal version, and is shown here with the game's foil sheet laid over it (the foil image is the game's; how strongly it is blended is an approximation). Numbers in the descriptions are filled in from the decal's stored values. The id shown for each decal is the key the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a> uses.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -117,7 +126,7 @@
     <div class="nav"><button id="d-prev" aria-label="Previous decal">&larr;</button><button id="d-next" aria-label="Next decal">&rarr;</button><button id="d-close">Close</button></div>
   </div>
   <div class="dlg-body">
-    <div class="big"><img id="d-img" alt=""></div>
+    <div class="big"><div class="foilBox"><img id="d-img" alt=""><i class="foil" id="d-foil"></i></div></div>
     <div><p class="desc" id="d-desc"></p><dl id="d-info"></dl></div>
   </div>
 </dialog>
@@ -133,6 +142,11 @@ const img = d => `img/decals/${d.icon}.webp`;
 const stars = n => `<span class="stars" aria-label="Rarity ${n} of 5">${'★'.repeat(n)}<i>${'★'.repeat(5 - n)}</i></span>`;
 const tags = d => (d.premium ? '<span class="tag prem">Premium</span>' : '') + (d.psOnly ? '<span class="tag">PS only</span>' : '');
 const num = n => Number(n).toLocaleString('en-US');
+// foilPos(): a spot on the foil sheet that is fixed for each decal, so neighbours do not all show the same colours
+function foilPos(d) { return `--fx:${(d.no * 37) % 101}%;--fy:${(d.no * 61) % 101}%`; }
+const foilWatch = new IntersectionObserver(es => {
+  for (const e of es) if (e.isIntersecting) { e.target.style.cssText = `--m:url(${e.target.dataset.m});${e.target.dataset.pos}`; foilWatch.unobserve(e.target); }
+}, { rootMargin: '300px' });
 
 function filtered() {
   const q = state.q.trim().toLowerCase();
@@ -152,9 +166,10 @@ function renderGrid() {
   list = filtered();
   $('count').textContent = `${list.length} of ${DECALS.length} decals`;
   $('grid').innerHTML = list.length ? list.map(d =>
-    `<button class="card" data-id="${d.id}"><div class="shot"><img loading="lazy" alt="" src="${img(d)}"></div>
+    `<button class="card" data-id="${d.id}"><div class="shot"><div class="foilBox"><img loading="lazy" alt="" src="${img(d)}">${d.premium ? `<i class="foil" data-m="${img(d)}" data-pos="${foilPos(d)}"></i>` : ''}</div></div>
       <div class="meta"><div class="name">${esc(d.name)}</div><div>${stars(d.rarity)}${tags(d)}</div></div></button>`).join('')
     : '<div class="empty">No decals match these filters.</div>';
+  for (const f of $('grid').querySelectorAll('.foil')) foilWatch.observe(f);
 }
 
 function openDecal(id) {
@@ -164,6 +179,7 @@ function openDecal(id) {
   $('d-name').textContent = d.name;
   $('d-tags').innerHTML = stars(d.rarity) + tags(d);
   $('d-img').src = img(d);
+  $('d-foil').style.cssText = d.premium ? `--m:url(${img(d)});${foilPos(d)}` : '';
   $('d-desc').textContent = d.desc;
   const twin = BY_ID[d.premium ? d.id.replace(/_P$/, '') : d.id + '_P'];
   const rows = [['Id', esc(d.id)], ['Category', esc(d.category)], ['Source', esc(d.source)]];
@@ -201,6 +217,7 @@ $('q').addEventListener('input', e => { state.q = e.target.value; renderGrid(); 
 $('cat').addEventListener('change', e => { state.cat = e.target.value; renderGrid(); });
 $('sort').addEventListener('change', e => { state.sort = e.target.value; renderGrid(); });
 $('ps').addEventListener('change', e => { state.ps = e.target.checked; renderGrid(); });
+$('foil').addEventListener('change', e => document.body.classList.toggle('nofoil', !e.target.checked));
 $('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openDecal(c.dataset.id); });
 $('d-close').addEventListener('click', closeDlg);
 $('d-prev').addEventListener('click', () => step(-1));
