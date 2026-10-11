@@ -175,6 +175,7 @@ function openModel(i) {
     ['Editor label', m.label], ['Save id', m.id], ['Body mesh', m.body], ['Hair mesh', m.hair || 'none (hair is part of the body)'],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   if (!$('dlg').open) $('dlg').showModal();
+  history.replaceState(null, '', '#' + m.id);
 }
 function step(d) {
   const list = shown().map(m => MODELS.indexOf(m));
@@ -196,15 +197,25 @@ bindSeg('filter', 'filter');
 bindSeg('view', 'view');
 bindSeg('mask', 'mask');
 bindSeg('d-mask', 'mask');
-$('d-close').addEventListener('click', () => $('dlg').close());
+$('d-close').addEventListener('click', () => closeDlg());
 $('d-prev').addEventListener('click', () => step(-1));
 $('d-next').addEventListener('click', () => step(1));
-$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });
 $('dlg').addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft') step(-1);
   if (e.key === 'ArrowRight') step(1);
 });
+const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
+const closeDlg = () => { $('dlg').close(); clearHash(); };
+$('dlg').addEventListener('close', clearHash);
+// #BODY_FEMALE_003 in the address opens that model (the save editor links here this way)
+function openFromHash() {
+  const i = MODELS.findIndex(m => m.id === decodeURIComponent(location.hash.slice(1)));
+  if (i >= 0) openModel(i);
+}
+window.addEventListener('hashchange', openFromHash);
 renderGrid();
+openFromHash();
 </script>
 </body>
 </html>

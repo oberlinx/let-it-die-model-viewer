@@ -125,6 +125,7 @@ const VIEWS = {
   full: { target: [0, 90, 0], dist: 380, w: 560, h: 800, fov: 30 },
   face: { target: [0, 166, 0], dist: 105, w: 600, h: 600, fov: 30 },
   wide: { target: [0, 91, 0], dist: 400, w: 800, h: 800, fov: 28 },
+  thumb: { target: [0, 167.5, 0], dist: 70, w: 480, h: 480, fov: 30 },
   body: { target: [0, 91, 0], dist: 400, w: 400, h: 800, fov: 28 },
 };
 async function show(id, view, yaw, nomask) {
@@ -167,6 +168,17 @@ async function saveScaled(name, scale) {
   const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, c.width, c.height);
   const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.9));
   await fetch('/save/' + name, { method: 'POST', body: blob });
+}
+async function renderThumbs() {
+  for (const m of models) {
+    for (const k in texCache) delete texCache[k];
+    await show(m.id, 'thumb', 0);
+    const src = renderer.domElement, c = document.createElement('canvas'); c.width = c.height = 120;
+    const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, 120, 120);
+    const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.82));
+    await fetch('/save/thumb_' + m.id + '.webp', { method: 'POST', body: blob });
+  }
+  await fetch('/save/done.png', { method: 'POST', body: 'x' });
 }
 async function renderAll() {
   for (const k in VIEWS) { VIEWS[k].w *= 2; VIEWS[k].h *= 2; }
