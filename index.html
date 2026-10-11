@@ -78,8 +78,8 @@
   .voice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--panel-border); }
   .voice .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
   .clips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .clips button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer; }
-  .clips button:hover { border-color: var(--accent-bright); }
+  .clips button, button.taunt { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer; }
+  .clips button:hover, button.taunt:hover { border-color: var(--accent-bright); }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 14px 0 0; font-size: 13px; }
   dt { color: var(--text-faint); }
   dd { margin: 0; overflow-wrap: anywhere; }
@@ -112,7 +112,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in its reference pose with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The game has 24 taunt animations and each model stores the id of one of them; ids step by three, so the two after it are listed as that model's as well, which is an inference rather than something the data states. Taunts reuse the ordinary voice clips; there are no separate taunt lines.</p>
+    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in its reference pose with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The game has 24 taunt animations and each model stores the id of one of them; ids step by three, so the two after it are listed as that model's as well, which is an inference rather than something the data states. Taunts reuse the ordinary voice clips; there are no separate taunt lines. A taunt button plays that taunt's voice clips and sound effects at the moments its animation triggers them.</p>
     <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -135,6 +135,7 @@
   </div>
 </dialog>
 
+<script src="data/taunts.js"></script>
 <script>
 const MODELS = [
   { id: 'BODY_FEMALE_001', voice: 'F01', voiceb: 5, provoke: 1, label: 'Female 1', gender: 'female', body: 'SK_CH_Main_NormalFemale', hair: 'SK_CH_Equip_NF_Hair0001' },
@@ -156,12 +157,9 @@ const MODELS = [
 ];
 // Sample voice clips shipped in voice/<id>_<en|jp>_<key>.ogg
 const CLIPS = { attack: 'Attack', hurt: 'Hurt', rage: 'Rage', alert: 'Alert', death: 'Death' };
-// Length in seconds of the game's taunt animations ANI_CH_EVE_Provoke_01..24. A model's taunt id points at the
-// first of its three (ids go 1, 4, 7 ... 22).
-const TAUNT_SECONDS = [4.4, 4.7, 5.4, 2.3, 5.5, 2.8, 3.6, 5.2, 3.7, 4.9, 5.3, 4.7, 3.4, 3.7, 4.4, 6.7, 7.7, 4.5, 4.7, 2.4, 4.5, 3.9, 3.5, 3.8];
 const VIEWS = { face: 'Face', side: 'Angle', body: 'Body', back: 'Back' };
 const state = { filter: 'all', view: 'face', mask: 'on', lang: 'en', open: -1 };
-let playing = null;
+let playing = null, tauntTimers = [], tauntSounds = [];
 const $ = id => document.getElementById(id);
 const img = (m, v) => `img/${m.id}_${v}${state.mask === 'off' && v !== 'back' ? '_nomask' : ''}.webp`;
 const shown = () => MODELS.filter(m => state.filter === 'all' || m.gender === state.filter);
@@ -196,14 +194,32 @@ function openModel(i) {
   $('d-info').innerHTML = [
     ['Editor label', m.label], ['Save id', m.id], ['Body mesh', m.body], ['Hair mesh', m.hair || 'none (hair is part of the body)'],
     ['Voice', `Set ${m.voice}, used by this model only (voice group ${m.voiceb})`],
-    ['Taunts', [0, 1, 2].map(k => `Provoke_${String(m.provoke + k).padStart(2, '0')} (${TAUNT_SECONDS[m.provoke + k - 1]} s)`).join(', ') + `, shared with ${m.gender === 'female' ? 'Male' : 'Female'} ${Number(m.id.slice(-3))}`],
+    ['Taunts', [0, 1, 2].map(k => m.provoke + k).map(n => `<button class="taunt" data-taunt="${n}" title="Play this taunt's sounds">&#9654; Provoke_${String(n).padStart(2, '0')} (${TAUNTS.taunts[n].s.toFixed(1)} s)</button>`).join(' ') + ` shared with ${m.gender === 'female' ? 'Male' : 'Female'} ${Number(m.id.slice(-3))}`],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('d-clips').innerHTML = Object.keys(CLIPS).map(k => `<button data-clip="${k}">&#9654; ${CLIPS[k]}</button>`).join('');
   stopClip();
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + m.id);
 }
-function stopClip() { if (playing) { playing.pause(); playing = null; } }
+function stopClip() {
+  if (playing) { playing.pause(); playing = null; }
+  for (const t of tauntTimers) clearTimeout(t);
+  for (const a of tauntSounds) a.pause();
+  tauntTimers = []; tauntSounds = [];
+}
+// playTaunt(): play a taunt's sounds at the times its animation triggers them, in the open model's voice.
+// Each voice cue has a couple of recorded variants; one is picked at random, as the game does.
+function playTaunt(n) {
+  stopClip();
+  const m = MODELS[state.open], pick = k => 1 + Math.floor(Math.random() * k);
+  for (const [t, what] of TAUNTS.taunts[n].ev) {
+    const sfx = what.startsWith('sfx:') ? what.slice(4) : null;
+    const a = new Audio(sfx ? `voice/taunt/sfx_${sfx}_${pick(TAUNTS.sfx[sfx])}.ogg` : `voice/taunt/${m.voice}_${state.lang}_${what}_${pick(TAUNTS.clips[m.voice][what])}.ogg`);
+    a.preload = 'auto';
+    tauntSounds.push(a);
+    tauntTimers.push(setTimeout(() => a.play().catch(() => { $('d-clip-note').textContent = 'This browser could not play the clip (Ogg Vorbis audio).'; }), t * 1000));
+  }
+}
 function playClip(key) {
   stopClip();
   playing = new Audio(`voice/${MODELS[state.open].id}_${state.lang}_${key}.ogg`);
@@ -230,6 +246,7 @@ bindSeg('view', 'view');
 bindSeg('mask', 'mask');
 bindSeg('d-mask', 'mask');
 bindSeg('d-lang', 'lang');
+$('d-info').addEventListener('click', e => { const b = e.target.closest('[data-taunt]'); if (b) playTaunt(+b.dataset.taunt); });
 $('d-clips').addEventListener('click', e => { const b = e.target.closest('[data-clip]'); if (b) playClip(b.dataset.clip); });
 $('d-close').addEventListener('click', () => closeDlg());
 $('d-prev').addEventListener('click', () => step(-1));

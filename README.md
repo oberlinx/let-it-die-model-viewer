@@ -22,6 +22,9 @@ The pictures in `img/` are renders of the game's own meshes and textures, produc
 - `voices.py <out-dir>` – copies five sample voice clips per model, in English and Japanese, out of the game's voice packages
   (they are stored as Ogg Vorbis, so nothing is re-encoded). These are the files in `voice/`.
 
+- `taunts.py <out-dir>` – reads the taunt animations' sound notifies (which voice cue or effect plays at which moment)
+  and copies the clips they need; this produces `data/taunts.js` and `voice/taunt/`.
+
 For the decal catalogue:
 
 - `decals.py <out-dir>` – reads `master_skill` and its related tables, resolves the English text, and dumps each decal's
