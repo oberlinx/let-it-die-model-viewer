@@ -1,0 +1,209 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>render harness</title>
+<style>body{margin:0;background:#333;color:#ddd;font:12px sans-serif} canvas{display:block}</style>
+<div id="info"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const Q = new URLSearchParams(location.search);
+const texCache = {};
+
+function decodeDXT1(buf) {
+  const dv = new DataView(buf);
+  const h = dv.getUint32(12, true), w = dv.getUint32(16, true);
+  const out = new Uint8Array(w * h * 4);
+  const dxt5 = dv.getUint32(84, true) === 0x35545844;
+  let p = 128;
+  const c = new Uint8Array(16), a = new Uint8Array(8);
+  for (let by = 0; by < h; by += 4) for (let bx = 0; bx < w; bx += 4) {
+    let alo = 0, ahi = 0;
+    if (dxt5) {
+      a[0] = dv.getUint8(p); a[1] = dv.getUint8(p + 1);
+      if (a[0] > a[1]) for (let i = 1; i < 7; i++) a[i + 1] = ((7 - i) * a[0] + i * a[1]) / 7;
+      else { for (let i = 1; i < 5; i++) a[i + 1] = ((5 - i) * a[0] + i * a[1]) / 5; a[6] = 0; a[7] = 255; }
+      alo = dv.getUint16(p + 2, true) | (dv.getUint8(p + 4) << 16); ahi = dv.getUint16(p + 5, true) | (dv.getUint8(p + 7) << 16);
+      p += 8;
+    }
+    const c0 = dv.getUint16(p, true), c1 = dv.getUint16(p + 2, true); let bits = dv.getUint32(p + 4, true); p += 8;
+    const r0 = (c0 >> 11) * 255 / 31, g0 = ((c0 >> 5) & 63) * 255 / 63, b0 = (c0 & 31) * 255 / 31;
+    const r1 = (c1 >> 11) * 255 / 31, g1 = ((c1 >> 5) & 63) * 255 / 63, b1 = (c1 & 31) * 255 / 31;
+    c[0] = r0; c[1] = g0; c[2] = b0; c[3] = 255; c[4] = r1; c[5] = g1; c[6] = b1; c[7] = 255;
+    if (dxt5 || c0 > c1) {
+      c[8] = (2 * r0 + r1) / 3; c[9] = (2 * g0 + g1) / 3; c[10] = (2 * b0 + b1) / 3; c[11] = 255;
+      c[12] = (r0 + 2 * r1) / 3; c[13] = (g0 + 2 * g1) / 3; c[14] = (b0 + 2 * b1) / 3; c[15] = 255;
+    } else {
+      c[8] = (r0 + r1) / 2; c[9] = (g0 + g1) / 2; c[10] = (b0 + b1) / 2; c[11] = 255;
+      c[12] = 0; c[13] = 0; c[14] = 0; c[15] = 0;
+    }
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+      const i = (bits & 3) * 4; bits >>>= 2;
+      const o = ((by + y) * w + bx + x) * 4;
+      out[o] = c[i]; out[o + 1] = c[i + 1]; out[o + 2] = c[i + 2]; out[o + 3] = c[i + 3];
+      if (dxt5) { const k = y * 4 + x; out[o + 3] = a[k < 8 ? (alo >> (3 * k)) & 7 : (ahi >> (3 * (k - 8))) & 7]; }
+    }
+  }
+  return { w, h, data: out };
+}
+
+async function loadImage(file) {
+  if (!texCache[file]) texCache[file] = fetch(file).then(r => r.arrayBuffer()).then(decodeDXT1);
+  return texCache[file];
+}
+async function loadTex(t, srgb) {
+  if (!t) return null;
+  const im = await loadImage(t.file);
+  const tex = new THREE.DataTexture(im.data, im.w, im.h, THREE.RGBAFormat);
+  tex.encoding = srgb ? THREE.sRGBEncoding : THREE.LinearEncoding;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter;
+  tex.anisotropy = 8; tex.needsUpdate = true;
+  return tex;
+}
+async function bin(name, kind, T) { return new T(await (await fetch(`${name}.${kind}.bin`)).arrayBuffer()); }
+
+async function buildMesh(info, opts) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(await bin(info.name, 'pos', Float32Array), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(await bin(info.name, 'nrm', Float32Array), 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(await bin(info.name, 'uv', Float32Array), 2));
+  g.setIndex(new THREE.BufferAttribute(await bin(info.name, 'idx', Uint32Array), 1));
+  const mats = [];
+  for (const grp of info.groups) {
+    const m = grp.material;
+    if (/CutSurface/.test(m.name)) continue;
+    g.addGroup(grp.start, grp.count, mats.length);
+    mats.push(await makeMaterial(m, opts));
+  }
+  return new THREE.Mesh(g, mats);
+}
+
+let makeMaterial = async function (m, opts) {
+  const hair = opts.kind === 'hair';
+  const mat = new THREE.MeshStandardMaterial({ roughness: hair ? 0.55 : 0.62, metalness: 0 });
+  mat.map = await loadTex(m.tex.DiffuseMap, true);
+  if (!Q.has('nonormal') && !(hair && Q.has('nohairnormal'))) { mat.normalMap = await loadTex(m.tex.NormalMap, false); mat.normalScale = new THREE.Vector2(1, -1); }
+  const u = {};
+  if (hair) {
+    // opacity lives in the red channel of the hair mask map
+    u.uMask = { value: await loadTex(m.tex.MaskMap, false) };
+    mat.side = THREE.DoubleSide; mat.alphaTest = 0.5;
+    mat.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, u);
+      sh.fragmentShader = 'uniform sampler2D uMask;\n' + sh.fragmentShader.replace('#include <map_fragment>',
+        '#include <map_fragment>\n diffuseColor.a = texture2D(uMask, vUv).r;');
+    };
+  } else if (m.tex.DiffuseMapPants && !Q.has('nopants')) {
+    // underwear atlas: colour in the top-left quadrant, region masks (R bra, G female lower, B male lower) bottom-right
+    const s = m.sca || {};
+    u.uPants = { value: await loadTex(m.tex.DiffuseMapPants, false) };
+    u.uPantsW = { value: new THREE.Vector3(s.SMPantsEyes_FemaleUpper || 0, s.SMPantsEyes_FemaleLower || 0, s.SMPantsEyes_MaleLower || 0) };
+    u.uPantsOff = { value: s['SMPantsEyesOffset V'] || 0 };
+    mat.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, u);
+      sh.fragmentShader = 'uniform sampler2D uPants; uniform vec3 uPantsW; uniform float uPantsOff;\n' + sh.fragmentShader.replace('#include <map_fragment>',
+        `#include <map_fragment>
+         vec2 pq = vUv * 0.5 + vec2(0.0, uPantsOff);
+         vec3 pm = texture2D(uPants, pq + vec2(0.5, 0.5)).rgb;
+         float pw = clamp(dot(pm, uPantsW), 0.0, 1.0) * step(pq.y, 0.5);
+         vec3 pc = pow(texture2D(uPants, pq).rgb, vec3(2.2));
+         diffuseColor.rgb = mix(diffuseColor.rgb, pc, pw);`);
+    };
+  }
+  return mat;
+};
+
+let renderer, scene, camera, models;
+async function init() {
+  models = await (await fetch('models.json')).json();
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.setPixelRatio(1);
+  document.body.appendChild(renderer.domElement);
+}
+const VIEWS = {
+  full: { target: [0, 90, 0], dist: 380, w: 560, h: 800, fov: 30 },
+  face: { target: [0, 166, 0], dist: 105, w: 600, h: 600, fov: 30 },
+  wide: { target: [0, 91, 0], dist: 400, w: 800, h: 800, fov: 28 },
+  body: { target: [0, 91, 0], dist: 400, w: 400, h: 800, fov: 28 },
+};
+async function show(id, view, yaw) {
+  const m = models.find(x => x.id === id);
+  const v = VIEWS[view || 'full'];
+  renderer.setSize(v.w, v.h);
+  scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x555560, 0.75));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(120, 260, 300); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xbfd0ff, 0.5); rim.position.set(-200, 200, -250); scene.add(rim);
+  const root = new THREE.Group(); scene.add(root);
+  root.add(await buildMesh(m.body, { kind: 'body', model: m }));
+  if (m.hair && !Q.has('nohair')) root.add(await buildMesh(m.hair, { kind: 'hair', model: m }));
+  root.rotation.y = (yaw || 0) * Math.PI / 180;
+  camera = new THREE.PerspectiveCamera(v.fov, v.w / v.h, 1, 2000);
+  camera.position.set(v.target[0], v.target[1], v.target[2] + v.dist);
+  camera.lookAt(...v.target);
+  renderer.render(scene, camera);
+  return m.label;
+}
+async function sheet(view, out, cell, yaw, ids) {
+  const list = ids ? models.filter(m => ids.includes(m.id)) : models;
+  const cols = Math.min(4, list.length), rows = Math.ceil(list.length / cols);
+  const c = document.createElement('canvas'); c.width = cols * cell; c.height = rows * cell;
+  const x = c.getContext('2d'); x.fillStyle = '#2a2d33'; x.fillRect(0, 0, c.width, c.height);
+  let i = 0;
+  for (const m of list) {
+    await show(m.id, view, yaw);
+    const px = (i % cols) * cell, py = Math.floor(i / cols) * cell;
+    x.drawImage(renderer.domElement, px, py, cell, cell);
+    x.fillStyle = '#fff'; x.font = '16px sans-serif'; x.fillText(m.label, px + 8, py + 20); i++;
+  }
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+  await fetch('/save/' + out, { method: 'POST', body: blob });
+}
+async function saveScaled(name, scale) {
+  const src = renderer.domElement, c = document.createElement('canvas');
+  c.width = src.width / scale; c.height = src.height / scale;
+  const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, c.width, c.height);
+  const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.9));
+  await fetch('/save/' + name, { method: 'POST', body: blob });
+}
+async function renderAll() {
+  for (const k in VIEWS) { VIEWS[k].w *= 2; VIEWS[k].h *= 2; }
+  for (const m of models) {
+    for (const k in texCache) delete texCache[k];
+    await show(m.id, 'face', 0); await saveScaled(m.id + '_face.webp', 2);
+    await show(m.id, 'face', 35); await saveScaled(m.id + '_side.webp', 2);
+    await show(m.id, 'body', 0); await saveScaled(m.id + '_body.webp', 2);
+    await show(m.id, 'body', 180); await saveScaled(m.id + '_back.webp', 2);
+  }
+  await fetch('/save/done.png', { method: 'POST', body: 'x' });
+}
+async function save(name) {
+  const blob = await new Promise(r => renderer.domElement.toBlob(r, 'image/png'));
+  await fetch('/save/' + name, { method: 'POST', body: blob });
+}
+async function dumpTex(file, out, size, opaque, chan) {
+  const im = await loadImage(file); const c = document.createElement('canvas'); c.width = im.w; c.height = im.h;
+  const id = new ImageData(new Uint8ClampedArray(im.data), im.w, im.h);
+  if (chan != null) for (let i = 0; i < id.data.length; i += 4) { const v = id.data[i + chan]; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+  if (opaque) for (let i = 3; i < id.data.length; i += 4) id.data[i] = 255;
+  c.getContext('2d').putImageData(id, 0, 0);
+  const d = document.createElement('canvas'); d.width = d.height = size; const x = d.getContext('2d');
+  x.fillStyle = '#f0f'; x.fillRect(0, 0, size, size); x.drawImage(c, 0, 0, size, size);
+  const blob = await new Promise(r => d.toBlob(r, 'image/png')); await fetch('/save/' + out, { method: 'POST', body: blob });
+}
+async function showTex(file, size) {
+  const im = await loadImage(file);
+  const c = document.createElement('canvas'); c.width = im.w; c.height = im.h;
+  const id = new ImageData(new Uint8ClampedArray(im.data), im.w, im.h);
+  if (Q.has('opaque')) for (let i = 3; i < id.data.length; i += 4) id.data[i] = 255;
+  c.getContext('2d').putImageData(id, 0, 0);
+  c.style.width = c.style.height = (size || 700) + 'px'; c.style.background = '#f0f';
+  document.body.appendChild(c);
+}
+(async () => {
+  await init();
+  if (Q.get('tex')) { for (const t of Q.get('tex').split(',')) await showTex(t, +Q.get('size')); }
+  else await show(Q.get('m') || 'BODY_FEMALE_001', Q.get('view'), +Q.get('yaw') || 0);
+  document.title = 'ready';
+})();
+</script>
