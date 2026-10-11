@@ -112,7 +112,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in its reference pose with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The taunt type is the id stored for the model, not a decoded animation.</p>
+    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in its reference pose with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The game has 24 taunt animations and each model stores the id of one of them; ids step by three, so the two after it are listed as that model's as well, which is an inference rather than something the data states. Taunts reuse the ordinary voice clips; there are no separate taunt lines.</p>
     <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -156,6 +156,9 @@ const MODELS = [
 ];
 // Sample voice clips shipped in voice/<id>_<en|jp>_<key>.ogg
 const CLIPS = { attack: 'Attack', hurt: 'Hurt', rage: 'Rage', alert: 'Alert', death: 'Death' };
+// Length in seconds of the game's taunt animations ANI_CH_EVE_Provoke_01..24. A model's taunt id points at the
+// first of its three (ids go 1, 4, 7 ... 22).
+const TAUNT_SECONDS = [4.4, 4.7, 5.4, 2.3, 5.5, 2.8, 3.6, 5.2, 3.7, 4.9, 5.3, 4.7, 3.4, 3.7, 4.4, 6.7, 7.7, 4.5, 4.7, 2.4, 4.5, 3.9, 3.5, 3.8];
 const VIEWS = { face: 'Face', side: 'Angle', body: 'Body', back: 'Back' };
 const state = { filter: 'all', view: 'face', mask: 'on', lang: 'en', open: -1 };
 let playing = null;
@@ -193,7 +196,7 @@ function openModel(i) {
   $('d-info').innerHTML = [
     ['Editor label', m.label], ['Save id', m.id], ['Body mesh', m.body], ['Hair mesh', m.hair || 'none (hair is part of the body)'],
     ['Voice', `Set ${m.voice}, used by this model only (voice group ${m.voiceb})`],
-    ['Taunt', `Type ${m.provoke}, shared with ${m.gender === 'female' ? 'Male' : 'Female'} ${Number(m.id.slice(-3))}`],
+    ['Taunts', [0, 1, 2].map(k => `Provoke_${String(m.provoke + k).padStart(2, '0')} (${TAUNT_SECONDS[m.provoke + k - 1]} s)`).join(', ') + `, shared with ${m.gender === 'female' ? 'Male' : 'Female'} ${Number(m.id.slice(-3))}`],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('d-clips').innerHTML = Object.keys(CLIPS).map(k => `<button data-clip="${k}">&#9654; ${CLIPS[k]}</button>`).join('');
   stopClip();
