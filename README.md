@@ -33,6 +33,9 @@ The pictures in `img/` are renders of the game's own meshes and textures, produc
 - `pack3d.py <dump-dir> <out-dir> <js-file>` and the harness's `bakeTextures()` – pack each mesh into one `.bin` and bake
   1024 px WebP textures (underwear painted into the skin, hair opacity as its own image) for the page's rotatable 3D view (`model3d/`).
 
+- `decoys.py <dump-dir>` – dumps the Decoyshroom statue for each body (a static mesh with the body, its hair and the
+  mushrooms growing on it). The renderer, `pack3d.py` and the models page's Decoy look use these.
+
 For the decal catalogue:
 
 - `decals.py <out-dir>` – reads `master_skill` and its related tables, resolves the English text, and dumps each decal's
