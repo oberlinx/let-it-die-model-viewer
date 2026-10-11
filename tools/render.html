@@ -169,6 +169,59 @@ async function saveScaled(name, scale) {
   const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.9));
   await fetch('/save/' + name, { method: 'POST', body: blob });
 }
+// ---- Assets for the page's interactive 3D view: textures at `size` px as WebP, POSTed as model3d_<name>.webp ----
+function toCanvas(im) {
+  const c = document.createElement('canvas'); c.width = im.w; c.height = im.h;
+  c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(im.data.buffer.slice(0)), im.w, im.h), 0, 0);
+  return c;
+}
+async function postScaled(name, canvas, size, q) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(canvas, 0, 0, size, size);
+  await fetch('/save/model3d_' + name + '.webp', { method: 'POST', body: await new Promise(r => c.toBlob(r, 'image/webp', q)) });
+}
+async function bakeTextures(size, hairOnly) {
+  for (const m of models) {
+    for (const k in texCache) delete texCache[k];
+    const mat = m.body.groups.find(g => !/CutSurface/.test(g.material.name)).material;
+    const opaque = im => { const o = new Uint8Array(im.data); for (let i = 3; i < o.length; i += 4) o[i] = 255; return toCanvas({ w: im.w, h: im.h, data: o }); };
+    if (!hairOnly) {
+    // skin with the underwear painted in (same lookup as the render shader above)
+    const d = await loadImage(mat.tex.DiffuseMap.file), p = await loadImage(mat.tex.DiffuseMapPants.file), s = mat.sca || {};
+    const W = [s.SMPantsEyes_FemaleUpper || 0, s.SMPantsEyes_FemaleLower || 0, s.SMPantsEyes_MaleLower || 0], off = s['SMPantsEyesOffset V'] || 0;
+    const out = new Uint8Array(d.data), px = (im, u, v) => (Math.min(im.h - 1, Math.floor(v * im.h)) * im.w + Math.min(im.w - 1, Math.floor(u * im.w))) * 4;
+    for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) {
+      const u = (x + 0.5) / d.w * 0.5, v = (y + 0.5) / d.h * 0.5 + off;
+      if (v > 0.5) continue;
+      const mi = px(p, u + 0.5, v + 0.5), w = Math.min(1, (p.data[mi] * W[0] + p.data[mi + 1] * W[1] + p.data[mi + 2] * W[2]) / 255);
+      if (w <= 0) continue;
+      const ci = px(p, u, v), o = (y * d.w + x) * 4;
+      for (let k = 0; k < 3; k++) out[o + k] = out[o + k] * (1 - w) + p.data[ci + k] * w;
+      out[o + 3] = 255;
+    }
+    for (let i = 3; i < out.length; i += 4) out[i] = 255;
+    await postScaled(m.body.name + '_D', toCanvas({ w: d.w, h: d.h, data: out }), size, 0.86);
+    await postScaled(m.body.name + '_N', opaque(await loadImage(mat.tex.NormalMap.file)), size, 0.88);
+    }
+    if (m.hair) {
+      const hm = m.hair.groups[0].material, hd = await loadImage(hm.tex.DiffuseMap.file), mk = await loadImage(hm.tex.MaskMap.file);
+      const col = new Uint8Array(hd.data), al = new Uint8Array(hd.data.length), mid = Math.floor(hd.h / 2);
+      for (let y = 0; y < hd.h; y++) for (let x = 0; x < hd.w; x++) {
+        const o = (y * hd.w + x) * 4, mo = (Math.floor(y * mk.h / hd.h) * mk.w + Math.floor(x * mk.w / hd.w)) * 4;
+        if (mk.data[mo + 2] > 127) { const s2 = (mid * hd.w + x) * 4; col[o] = hd.data[s2]; col[o + 1] = hd.data[s2 + 1]; col[o + 2] = hd.data[s2 + 2]; }
+        col[o + 3] = 255; al[o] = al[o + 1] = al[o + 2] = mk.data[mo]; al[o + 3] = 255;
+      }
+      // the texture is pale outside the strands; fill that with the average hair colour so strand edges do not pick it up
+      const sum = [0, 0, 0]; let cnt = 0;
+      for (let o = 0; o < col.length; o += 4) if (al[o] > 127) { sum[0] += col[o]; sum[1] += col[o + 1]; sum[2] += col[o + 2]; cnt++; }
+      for (let o = 0; o < col.length; o += 4) if (al[o] <= 127) { col[o] = sum[0] / cnt; col[o + 1] = sum[1] / cnt; col[o + 2] = sum[2] / cnt; }
+      await postScaled(m.hair.name + '_D', toCanvas({ w: hd.w, h: hd.h, data: col }), size, 0.86);
+      await postScaled(m.hair.name + '_A', toCanvas({ w: hd.w, h: hd.h, data: al }), size, 0.9);
+      await postScaled(m.hair.name + '_N', opaque(await loadImage(hm.tex.NormalMap.file)), size, 0.88);
+    }
+  }
+  await fetch('/save/done.png', { method: 'POST', body: 'x' });
+}
 async function renderThumbs() {
   for (const m of models) {
     for (const k in texCache) delete texCache[k];

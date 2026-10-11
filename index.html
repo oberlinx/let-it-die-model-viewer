@@ -16,6 +16,7 @@
     --display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
   nav.pages { display: flex; gap: 6px; margin-bottom: 18px; }
@@ -80,6 +81,10 @@
   .clips { display: flex; flex-wrap: wrap; gap: 6px; }
   .clips button, button.taunt { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer; }
   .clips button:hover, button.taunt:hover { border-color: var(--accent-bright); }
+  .stage3d .canvasBox { height: min(62vh, 560px); background: var(--stage); border: 1px solid var(--panel-border); }
+  .stage3d canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  .stage3d canvas:active { cursor: grabbing; }
+  .stageBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 8px; }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 14px 0 0; font-size: 13px; }
   dt { color: var(--text-faint); }
   dd { margin: 0; overflow-wrap: anywhere; }
@@ -112,7 +117,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in its reference pose with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The game has 24 taunt animations and each model stores the id of one of them; ids step by three, so the two after it are listed as that model's as well, which is an inference rather than something the data states. Taunts reuse the ordinary voice clips; there are no separate taunt lines. A taunt button plays that taunt's voice clips and sound effects at the moments its animation triggers them.</p>
+    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in its reference pose with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The 3D view uses the same meshes with textures reduced to 1024 px. The game has 24 taunt animations and each model stores the id of one of them; ids step by three, so the two after it are listed as that model's as well, which is an inference rather than something the data states. Taunts reuse the ordinary voice clips; there are no separate taunt lines. A taunt button plays that taunt's voice clips and sound effects at the moments its animation triggers them.</p>
     <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -121,10 +126,17 @@
   <div class="dlg-head">
     <h2 id="d-name"></h2><span class="id" id="d-id"></span>
     <div class="seg"><span class="lbl">Gas mask</span><div class="btns" id="d-mask" data-seg="mask"><button data-v="on" aria-pressed="true">On</button><button data-v="off" aria-pressed="false">Off</button></div></div>
+    <div class="seg"><div class="btns" id="d-mode" data-seg="mode"><button data-v="photos" aria-pressed="true">Photos</button><button data-v="3d" aria-pressed="false">3D</button></div></div>
     <div class="nav"><button id="d-prev" aria-label="Previous model">&larr;</button><button id="d-next" aria-label="Next model">&rarr;</button><button id="d-close">Close</button></div>
   </div>
   <div class="dlg-body">
     <div class="views" id="d-views"></div>
+    <div class="stage3d" id="d-3d" hidden>
+      <div class="canvasBox"><canvas id="d-canvas"></canvas></div>
+      <div class="stageBar"><span class="id" id="d-3d-note"></span>
+        <div class="seg"><div class="btns" id="d-preset"><button data-v="body" aria-pressed="false">Whole body</button><button data-v="face" aria-pressed="false">Face</button></div></div>
+      </div>
+    </div>
     <dl id="d-info"></dl>
     <div class="voice">
       <span class="lbl">Voice samples</span>
@@ -136,6 +148,7 @@
 </dialog>
 
 <script src="data/taunts.js"></script>
+<script src="data/models3d.js"></script>
 <script>
 const MODELS = [
   { id: 'BODY_FEMALE_001', voice: 'F01', voiceb: 5, provoke: 1, label: 'Female 1', gender: 'female', body: 'SK_CH_Main_NormalFemale', hair: 'SK_CH_Equip_NF_Hair0001' },
@@ -158,7 +171,7 @@ const MODELS = [
 // Sample voice clips shipped in voice/<id>_<en|jp>_<key>.ogg
 const CLIPS = { attack: 'Attack', hurt: 'Hurt', rage: 'Rage', alert: 'Alert', death: 'Death' };
 const VIEWS = { face: 'Face', side: 'Angle', body: 'Body', back: 'Back' };
-const state = { filter: 'all', view: 'face', mask: 'on', lang: 'en', open: -1 };
+const state = { filter: 'all', view: 'face', mask: 'on', lang: 'en', mode: 'photos', open: -1 };
 let playing = null, tauntTimers = [], tauntSounds = [];
 const $ = id => document.getElementById(id);
 const img = (m, v) => `img/${m.id}_${v}${state.mask === 'off' && v !== 'back' ? '_nomask' : ''}.webp`;
@@ -196,11 +209,138 @@ function openModel(i) {
     ['Voice', `Set ${m.voice}, used by this model only (voice group ${m.voiceb})`],
     ['Taunts', [0, 1, 2].map(k => m.provoke + k).map(n => `<button class="taunt" data-taunt="${n}" title="Play this taunt's sounds">&#9654; Provoke_${String(n).padStart(2, '0')} (${TAUNTS.taunts[n].s.toFixed(1)} s)</button>`).join(' ') + ` shared with ${m.gender === 'female' ? 'Male' : 'Female'} ${Number(m.id.slice(-3))}`],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  $('d-views').hidden = state.mode === '3d';
+  $('d-3d').hidden = state.mode !== '3d';
+  if (state.mode === '3d') { if (state.shown3d === m.id) v3Mask(); else { state.shown3d = m.id; show3d(); } }
   $('d-clips').innerHTML = Object.keys(CLIPS).map(k => `<button data-clip="${k}">&#9654; ${CLIPS[k]}</button>`).join('');
   stopClip();
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + m.id);
 }
+// ---- 3D view: three.js is fetched the first time it is opened; meshes and textures per model on demand ----
+const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+const PRESETS = { face: { ty: 166, dist: 105 }, body: { ty: 91, dist: 400 } };
+let threeReady = null, v3 = null, v3Token = 0;
+function loadThree() {
+  return threeReady || (threeReady = new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = THREE_URL; s.onload = ok; s.onerror = () => fail(new Error('three.js did not load'));
+    document.head.appendChild(s);
+  }));
+}
+function tex3d(name, srgb) {
+  const t = new THREE.TextureLoader().load(`model3d/${name}.webp`, () => { if (v3) v3.dirty = true; });
+  t.flipY = false; t.encoding = srgb ? THREE.sRGBEncoding : THREE.LinearEncoding; t.anisotropy = 8;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+// mesh3d(): one mesh from model3d/<name>.bin (layout in tools/pack3d.py). Gas-mask triangles get their own material.
+async function mesh3d(info, hair) {
+  const buf = await (await fetch(`model3d/${info.name}.bin`)).arrayBuffer(), n = info.verts;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf, 0, n * 3), 3));
+  g.setAttribute('normal', new THREE.InterleavedBufferAttribute(new THREE.InterleavedBuffer(new Int8Array(buf, n * 12, n * 4), 4), 3, 0, true));
+  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(buf, n * 16, n * 2), 2));
+  g.setIndex(new THREE.BufferAttribute(new Uint16Array(buf, n * 24, info.indices), 1));
+  const base = { map: tex3d(info.name + '_D', true), normalMap: tex3d(info.name + '_N', false), normalScale: new THREE.Vector2(1, -1), metalness: 0 };
+  const mats = info.groups.map(grp => {
+    g.addGroup(grp.start, grp.count, info.groups.indexOf(grp));
+    const m = new THREE.MeshStandardMaterial(Object.assign({ roughness: hair ? 0.55 : 0.62 }, base));
+    if (hair) {
+      m.alphaMap = tex3d(info.name + '_A', false); m.alphaTest = 0.5; m.side = THREE.DoubleSide;
+      // strands that pass the alpha test must be written fully opaque, or the page shows through the canvas there
+      m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>' + String.fromCharCode(10) + 'gl_FragColor.a = 1.0;'); };
+    }
+    m.userData.part = grp.part || '';
+    return m;
+  });
+  return new THREE.Mesh(g, mats);
+}
+function v3Init() {
+  const canvas = $('d-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x555560, 0.75));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9), rim = new THREE.DirectionalLight(0xbfd0ff, 0.5);
+  const camera = new THREE.PerspectiveCamera(30, 1, 1, 3000);
+  camera.add(key); camera.add(rim); key.position.set(120, 170, 300); rim.position.set(-200, 110, -250);
+  scene.add(camera);
+  v3 = { renderer, scene, camera, root: null, yaw: 0, pitch: 0, dirty: true, ...PRESETS.body };
+  // drag: rotate (shift or right button: move up/down); wheel or pinch: zoom
+  const ptrs = new Map(); let pinch = 0;
+  canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, e); pinch = 0; });
+  const up = e => { ptrs.delete(e.pointerId); pinch = 0; };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('pointermove', e => {
+    const prev = ptrs.get(e.pointerId);
+    if (!prev) return;
+    ptrs.set(e.pointerId, e);
+    if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      if (pinch) v3Zoom(pinch / d);
+      pinch = d;
+    } else if (e.shiftKey || (e.buttons & 2)) {
+      v3.ty = Math.max(0, Math.min(185, v3.ty + (e.clientY - prev.clientY) * v3.dist / 900));
+    } else {
+      v3.yaw -= (e.clientX - prev.clientX) * 0.008;
+      v3.pitch = Math.max(-1.2, Math.min(1.2, v3.pitch + (e.clientY - prev.clientY) * 0.006));
+    }
+    v3.dirty = true;
+  });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); v3Zoom(Math.exp(e.deltaY * 0.001)); }, { passive: false });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  new ResizeObserver(() => { v3.dirty = true; }).observe(canvas.parentElement);
+  (function frame() {
+    requestAnimationFrame(frame);
+    if (!v3.dirty || !$('dlg').open || state.mode !== '3d') return;
+    v3.dirty = false;
+    const w = canvas.parentElement.clientWidth, h = canvas.parentElement.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    const cp = Math.cos(v3.pitch);
+    camera.position.set(Math.sin(v3.yaw) * cp * v3.dist, v3.ty + Math.sin(v3.pitch) * v3.dist, Math.cos(v3.yaw) * cp * v3.dist);
+    camera.lookAt(0, v3.ty, 0);
+    renderer.render(scene, camera);
+  })();
+}
+function v3Zoom(f) { v3.dist = Math.max(40, Math.min(700, v3.dist * f)); v3.dirty = true; }
+function v3Preset(name) { if (v3) { Object.assign(v3, PRESETS[name], { yaw: 0, pitch: 0, dirty: true }); } }
+function v3Mask() {
+  if (!v3 || !v3.root) return;
+  v3.root.traverse(o => { for (const m of [].concat(o.material || [])) if (m.userData.part === 'mask') m.visible = state.mask === 'on'; });
+  v3.dirty = true;
+}
+function v3Clear() {
+  if (!v3 || !v3.root) return;
+  v3.root.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    for (const m of [].concat(o.material || [])) { for (const k of ['map', 'normalMap', 'alphaMap']) if (m[k]) m[k].dispose(); m.dispose(); }
+  });
+  v3.scene.remove(v3.root); v3.root = null;
+}
+// show3d(): load the open model into the 3D view. A newer call wins if the user moves on while one is loading.
+async function show3d() {
+  const token = ++v3Token, m = MODELS[state.open], info = MODELS3D[m.id], note = $('d-3d-note');
+  note.textContent = 'Loading 3D model…';
+  try {
+    await loadThree();
+    if (!v3) v3Init();
+    const root = new THREE.Group();
+    root.add(await mesh3d(info.body, false));
+    if (info.hair) root.add(await mesh3d(info.hair, true));
+    if (token !== v3Token) return;
+    v3Clear();
+    v3.root = root; v3.scene.add(root);
+    v3Mask();
+    note.textContent = 'Drag to rotate · scroll or pinch to zoom · shift-drag to move up and down';
+  } catch (err) {
+    if (token === v3Token) note.textContent = 'The 3D view could not be loaded (' + err.message + ').';
+  }
+}
+
 function stopClip() {
   if (playing) { playing.pause(); playing = null; }
   for (const t of tauntTimers) clearTimeout(t);
@@ -246,6 +386,8 @@ bindSeg('view', 'view');
 bindSeg('mask', 'mask');
 bindSeg('d-mask', 'mask');
 bindSeg('d-lang', 'lang');
+bindSeg('d-mode', 'mode');
+$('d-preset').addEventListener('click', e => { const b = e.target.closest('button'); if (b) v3Preset(b.dataset.v); });
 $('d-info').addEventListener('click', e => { const b = e.target.closest('[data-taunt]'); if (b) playTaunt(+b.dataset.taunt); });
 $('d-clips').addEventListener('click', e => { const b = e.target.closest('[data-clip]'); if (b) playClip(b.dataset.clip); });
 $('d-close').addEventListener('click', () => closeDlg());

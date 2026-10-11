@@ -25,6 +25,9 @@ The pictures in `img/` are renders of the game's own meshes and textures, produc
 - `taunts.py <out-dir>` – reads the taunt animations' sound notifies (which voice cue or effect plays at which moment)
   and copies the clips they need; this produces `data/taunts.js` and `voice/taunt/`.
 
+- `pack3d.py <dump-dir> <out-dir> <js-file>` and the harness's `bakeTextures()` – pack each mesh into one `.bin` and bake
+  1024 px WebP textures (underwear painted into the skin, hair opacity as its own image) for the page's rotatable 3D view (`model3d/`).
+
 For the decal catalogue:
 
 - `decals.py <out-dir>` – reads `master_skill` and its related tables, resolves the English text, and dumps each decal's
