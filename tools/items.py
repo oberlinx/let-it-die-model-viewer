@@ -100,15 +100,25 @@ for p in parts:
 
 # R&D and upgrade costs (master_part_research). mateN_id are the materials; craft_* is the one-off development cost,
 # lvup_* the cost of each upgrade level (a base amount that grows with level). Spirit = SPLithium.
+# The page works out the per-level costs, so the raw parameters are passed through:
+#   upgrade = { spl: [base, multiplier per level], time: [first, added per level] in minutes,
+#               mats: [[material id, base amount, amount added, every N levels (0 = a fraction every level)], ...] }
+#   levels = the part's highest raw level (master_part.reflvllmt); uncap = it continues an earlier part's +N
 research = {r['ptid']: r for r in rows('select * from master_part_research')}
+part_by_id = {p['id']: p for p in parts}
 for g in gear:
     r = research.get(g['id'])
     if not r or not r['is_open']: continue
     mats = [(r['mate%d_id' % i], r['craft_mate%d_num' % i], r['lvup_mate%d_num' % i], r['lvup_mate%d_add_num' % i]) for i in range(1, 6) if r['mate%d_id' % i]]
     craft = [[m, int(n)] for m, n, _, _ in mats if n >= 1]
     if craft or r['craft_spirit']: g['craft'] = dict(spl=r['craft_spirit'], mats=craft)
-    up = [[m, int(n)] for m, _, n, add in mats if n >= 1 or add > 0]
-    if up or r['lvup_spirit']: g['upgrade'] = dict(spl=r['lvup_spirit'], mats=up)
+    up = [[r['mate%d_id' % i], r['lvup_mate%d_num' % i], r['lvup_mate%d_add_num' % i], r['lvup_mate%d_add_lv' % i]] for i in range(1, 6)
+          if r['mate%d_id' % i] and (r['lvup_mate%d_num' % i] > 0 or r['lvup_mate%d_add_num' % i] > 0)]
+    p = part_by_id[g['id']]
+    if p['reflvllmt'] > 1 and (up or r['lvup_spirit']):
+        g['upgrade'] = dict(spl=[r['lvup_spirit'], r['lvup_spirit_c']], time=[r['init_waiting_minute'], r['add_waiting_minute']], mats=up)
+        g['levels'] = p['reflvllmt']
+        if p['is_limitbreak']: g['uncap'] = True
 
 MAT = {'ITTP_MATERIAL': 'Material', 'ITTP_HEAL': 'Consumable', 'ITTP_BACK': 'Consumable', 'ITTP_BIV': 'Consumable', 'ITTP_WOOD': 'Material'}
 materials = []

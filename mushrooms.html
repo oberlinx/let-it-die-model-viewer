@@ -101,6 +101,12 @@
   .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
   .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .usedby { max-height: 150px; overflow: auto; }
+  .upg { margin-top: 14px; max-height: 260px; overflow: auto; border-top: 1px solid var(--panel-border); padding-top: 10px; }
+  .upg table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+  .upg th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 2px 12px 4px 0; position: sticky; top: 0; background: var(--panel); }
+  .upg td { padding: 2px 12px 2px 0; vertical-align: top; }
+  .upg td:first-child, .upg td:nth-child(2), .upg td:last-child { white-space: nowrap; }
+  .upg a { color: var(--text); }
 </style>
 </head>
 <body>
@@ -136,7 +142,7 @@
   </div>
   <div class="dlg-body">
     <div><div class="big wide"><img id="d-img" alt=""></div><div id="d-extra"></div></div>
-    <div><div class="tiers" id="d-tiers"></div><p class="desc" id="d-desc"></p><dl id="d-info"></dl></div>
+    <div><div class="tiers" id="d-tiers"></div><p class="desc" id="d-desc"></p><dl id="d-info"></dl><div class="upg" id="d-up" hidden></div></div>
   </div>
 </dialog>
 

@@ -101,6 +101,12 @@
   .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
   .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .usedby { max-height: 150px; overflow: auto; }
+  .upg { margin-top: 14px; max-height: 260px; overflow: auto; border-top: 1px solid var(--panel-border); padding-top: 10px; }
+  .upg table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+  .upg th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 2px 12px 4px 0; position: sticky; top: 0; background: var(--panel); }
+  .upg td { padding: 2px 12px 2px 0; vertical-align: top; }
+  .upg td:first-child, .upg td:nth-child(2), .upg td:last-child { white-space: nowrap; }
+  .upg a { color: var(--text); }
 </style>
 </head>
 <body>
@@ -129,7 +135,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; five pieces (such as Fists) have none. The two attack or defence numbers are the pair the game stores for each piece. Development and upgrade costs are the stored base amounts; an upgrade material shown without a number is only needed at higher levels. Blueprints are left out because each one maps to a piece already listed.</p>
+    <p>Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; five pieces (such as Fists) have none. The two attack or defence numbers are the pair the game stores for each piece. Upgrade costs per level are worked out from the stored base amounts and growth factors using the same rounding rule the game is known to use for durability; they have not been checked against the game level by level. Blueprints are left out because each one maps to a piece already listed.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -141,7 +147,7 @@
   </div>
   <div class="dlg-body">
     <div><div class="big"><img id="d-img" alt=""></div><div id="d-extra"></div></div>
-    <div><div class="tiers" id="d-tiers"></div><p class="desc" id="d-desc"></p><dl id="d-info"></dl></div>
+    <div><div class="tiers" id="d-tiers"></div><p class="desc" id="d-desc"></p><dl id="d-info"></dl><div class="upg" id="d-up" hidden></div></div>
   </div>
 </dialog>
 
@@ -223,6 +229,21 @@ function matLink([id, n]) {
   return (n ? n + ' × ' : '') + (href ? `<a href="${href}">${esc(name)}</a>` : esc(name));
 }
 const cost = c => [c.spl ? num(c.spl) + ' SPLithium' : ''].concat(c.mats.map(matLink)).filter(Boolean).join(', ');
+// Upgrade costs per level. The game scales stored values as base x multiplier^(level - 1), rounded down (the same rule
+// it uses for durability); a material's amount goes up by a fixed step every N levels, or by a fraction each level.
+// "level" is the raw level being upgraded from, starting at 1.
+function upgradeSteps(d) {
+  const u = d.upgrade, prev = PIECES.find(p => p.next === d.id);
+  const carry = d.uncap && prev && prev.levels ? prev.levels - 1 : 0;        // an uncapped part carries on from the earlier part's +N
+  const steps = [];
+  for (let lv = 1; lv < d.levels; lv++) {
+    const mats = u.mats.map(([id, base, add, every]) => [id, Math.floor(base + (every > 0 ? add * Math.floor((lv - 1) / every) : add * (lv - 1)) + 1e-7)]).filter(m => m[1] > 0);
+    const from = d.uncap ? carry + lv : lv - 1;        // an uncapped part's first raw level already shows as carry + 1
+    steps.push({ label: `+${from} → +${from + 1}`, spl: Math.floor(u.spl[0] * Math.pow(u.spl[1], lv - 1) + 1e-7), mats, minutes: u.time[0] + u.time[1] * (lv - 1) });
+  }
+  return steps;
+}
+const clock = m => m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) + ' min' : ''}` : m + ' min';
 function openItem(id) {
   const d = BY_ID[id];
   if (!d) return;
@@ -245,7 +266,6 @@ function openItem(id) {
   if (d.req) rows.push(['Requires', `${esc(d.req[0])} ${num(d.req[1])}`]);
   if (d.rage) rows.push(['Rage move', esc(d.rage)]);
   if (d.craft) rows.push(['Develop', cost(d.craft)]);
-  if (d.upgrade) rows.push(['Each upgrade', cost(d.upgrade)]);
   if (d.buy) rows.push(['Shop price', num(d.buy) + ' Kill Coins']);
   if (d.sell) rows.push(['Sells for', num(d.sell) + ' Kill Coins']);
   const k = setKey(id), set = k && SETS[k[0]];
@@ -253,6 +273,11 @@ function openItem(id) {
   const used = USED[id];
   if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="#${pid}">${esc(BY_ID[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
   $('d-info').innerHTML = rows.map(([k2, v]) => `<dt>${k2}</dt><dd>${v}</dd>`).join('');
+  const steps = d.upgrade ? upgradeSteps(d) : [];
+  $('d-up').hidden = !steps.length;
+  $('d-up').innerHTML = steps.length ? `<table><tr><th>Upgrade</th><th>SPLithium</th><th>Materials</th><th>Time</th></tr>` +
+    steps.map(s => `<tr><td>${s.label}</td><td>${num(s.spl)}</td><td>${s.mats.map(matLink).join(', ') || '–'}</td><td>${clock(s.minutes)}</td></tr>`).join('') +
+    `<tr><td>Total</td><td>${num(steps.reduce((n, s) => n + s.spl, 0))}</td><td colspan="2">${Object.entries(steps.reduce((t, s) => { for (const [id, n] of s.mats) t[id] = (t[id] || 0) + n; return t; }, {})).map(([id, n]) => matLink([id, n])).join(', ') || '–'}</td></tr></table>` : '';
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + d.id);
 }
