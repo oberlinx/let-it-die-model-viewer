@@ -91,7 +91,7 @@
 </head>
 <body>
 <div class="wrap">
-  <nav class="pages"><a href="./">Fighter Models</a><a href="decals.html" aria-current="page">Skill Decals</a></nav>
+  <nav class="pages"><a href="./">Fighter Models</a><a href="decals.html" aria-current="page">Skill Decals</a><a href="gear.html">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
   <header>
     <h1>LET IT DIE <span>Skill Decals</span></h1>
     <p>Every skill decal in the game data, with its icon, effect, rarity and where it comes from.</p>
@@ -184,7 +184,7 @@ function openDecal(id) {
   $('d-desc').textContent = d.desc;
   const twin = BY_ID[d.premium ? d.id.replace(/_P$/, '') : d.id + '_P'];
   const rows = [['Id', esc(d.id)], ['Category', esc(d.category)], ['Source', esc(d.source)]];
-  if (d.unlock) rows.push(['Unlocked by', d.unlock.map(u => `${u.count} × ${esc(u.mushroom)}`).join(', ')]);
+  if (d.unlock) rows.push(['Unlocked by', d.unlock.map(u => `${u.count} × ` + (u.id ? `<a href="mushrooms.html#${u.id}">${esc(u.mushroom)}</a>` : esc(u.mushroom))).join(', ')]);
   if (d.stewOdds != null) rows.push(['Stew odds', d.stewOdds + '%']);
   if (d.buy) rows.push(['Buy', num(d.buy) + ' Kill Coins']);
   if (d.sell) rows.push(['Sell', [d.sell.coins ? num(d.sell.coins) + ' Kill Coins' : '', d.sell.recycle ? num(d.sell.recycle) + ' recycle points' : ''].filter(Boolean).join(' or ')]);

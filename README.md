@@ -7,6 +7,10 @@ for the model picker in the [LET IT DIE save editor](https://oberlinx.github.io/
 `decals.html` is a searchable catalogue of all 368 skill decals: icon, effect, rarity, category, where each one
 comes from, and links between the normal and premium versions.
 
+`gear.html` lists every weapon, armour piece and crafting material with its icon and stats, and `mushrooms.html` every mushroom
+and edible beast with what it does raw and grilled. Both are made by `tools/items.py` (data and raw icons) and
+`tools/item-images.html` (WebP conversion, served by `serve.py`).
+
 Open `index.html`, or serve the folder with GitHub Pages.
 
 ## How the images were made
