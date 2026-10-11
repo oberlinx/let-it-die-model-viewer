@@ -1,6 +1,6 @@
 """Pose the meshes dumped by extract.py with one frame of a game animation.
 
-Usage: pose.py <dump-dir> [sequence-name] [frame 0..1]
+Usage: pose.py <dump-dir> [sequence-name] [frame 0..1] [tag]
 Writes <mesh>.pose.pos.bin / <mesh>.pose.nrm.bin next to the reference-pose files, and adds "head" (the posed
 head bone position) to each model in models.json.
 
@@ -15,6 +15,7 @@ import upk
 D = sys.argv[1]
 SEQ = sys.argv[2] if len(sys.argv) > 2 else 'ANI_CH_IDL_Neutral'
 AT = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
+TAG = sys.argv[4] if len(sys.argv) > 4 else 'pose'     # output suffix; only the default 'pose' is recorded in models.json
 ANIMS = {'female': ('AS_CH_Main_Female_Common_SF.upk', 'AS_CH_Main_Female_Type_SF.upk'),
          'male': ('AS_CH_Main_Male_Common_SF.upk', 'AS_CH_Main_Male_Type_SF.upk')}
 ANIM_CONJ = True    # animation keys store non-root rotations conjugated relative to the reference skeleton
@@ -150,7 +151,7 @@ def pose_mesh(info, anim_world_by_name, body_anim=None):
             qx += wt * (m[0] * nx + m[1] * ny + m[2] * nz); qy += wt * (m[3] * nx + m[4] * ny + m[5] * nz); qz += wt * (m[6] * nx + m[7] * ny + m[8] * nz)
         n = math.sqrt(qx * qx + qy * qy + qz * qz) or 1.0
         op.extend((px / tw, -py / tw, pz / tw)); on.extend((qx / n, -qy / n, qz / n))
-    op.tofile(open(os.path.join(D, name + '.pose.pos.bin'), 'wb')); on.tofile(open(os.path.join(D, name + '.pose.nrm.bin'), 'wb'))
+    op.tofile(open(os.path.join(D, '%s.%s.pos.bin' % (name, TAG)), 'wb')); on.tofile(open(os.path.join(D, '%s.%s.nrm.bin' % (name, TAG)), 'wb'))
     return {b[0]: animw[i] for i, b in enumerate(bones)}, op
 
 
@@ -166,6 +167,7 @@ if __name__ == '__main__':
         bw, op = pose_mesh(m['body'], None, anims[g])
         if m['hair']: pose_mesh(m['hair'], None, anims[g])
         h = bw['HeadJT'][1]; ys = op[1::3]
+        if TAG != 'pose': continue
         m['pose'] = dict(sequence=SEQ, head=[h[0], -h[1], h[2]], min=[min(op[0::3]), min(ys), min(op[2::3])], max=[max(op[0::3]), max(ys), max(op[2::3])])
         print(m['label'], 'head', [round(c, 1) for c in m['pose']['head']], 'x', round(m['pose']['min'][0]), round(m['pose']['max'][0]), 'y', round(min(ys)), round(max(ys)))
     json.dump(models, open(os.path.join(D, 'models.json'), 'w'), indent=1)

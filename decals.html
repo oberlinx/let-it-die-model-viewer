@@ -22,6 +22,7 @@
     --display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
   nav.pages { display: flex; gap: 6px; margin-bottom: 18px; }
@@ -91,7 +92,7 @@
 </head>
 <body>
 <div class="wrap">
-  <nav class="pages"><a href="./">Fighter Models</a><a href="decals.html" aria-current="page">Skill Decals</a><a href="gear.html">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
+  <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="decals.html" aria-current="page">Skill Decals</a><a href="gear.html">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
   <header>
     <h1>LET IT DIE <span>Skill Decals</span></h1>
     <p>Every skill decal in the game data, with its icon, effect, rarity and where it comes from.</p>
@@ -115,7 +116,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_skill</code> tables and the icons from its UI packages; a premium decal shares its art with the normal version, and is shown here with the game's foil sheet laid over it (the foil image is the game's; how strongly it is blended is an approximation). Numbers in the descriptions are filled in from the decal's stored values. The id shown for each decal is the key the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a> uses.</p>
+    <p>Data comes from the game's <code>master_skill</code> tables and the icons from its UI packages; a decal and its premium version share one card and one piece of art (switch between them in the detail view); the premium one is shown here with the game's foil sheet laid over it (the foil image is the game's; how strongly it is blended is an approximation). Numbers in the descriptions are filled in from the decal's stored values. The id shown for each decal is the key the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a> uses.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -123,6 +124,7 @@
 <dialog id="dlg">
   <div class="dlg-head">
     <h2 id="d-name"></h2><span id="d-tags"></span>
+    <div class="seg" id="d-ver" hidden><div class="btns"><button data-v="normal" aria-pressed="true">Normal</button><button data-v="premium" aria-pressed="false">Premium</button></div></div>
     <div class="nav"><button id="d-prev" aria-label="Previous decal">&larr;</button><button id="d-next" aria-label="Next decal">&rarr;</button><button id="d-close">Close</button></div>
   </div>
   <div class="dlg-body">
@@ -141,6 +143,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const img = d => `img/decals/${d.icon}.webp`;
 const stars = n => `<span class="stars" aria-label="Rarity ${n} of 5">${'★'.repeat(n)}<i>${'★'.repeat(5 - n)}</i></span>`;
 const tags = d => (d.premium ? '<span class="tag prem">Premium</span>' : '') + (d.psOnly ? '<span class="tag">PS only</span>' : '');
+// A decal and its premium version ("..._P") are one card: twin() is the other half of the pair, if there is one.
+const twin = d => BY_ID[d.premium ? d.id.replace(/_P$/, '') : d.id + '_P'];
+const pairTag = d => !d.premium && twin(d) ? '<span class="tag prem">+ Premium</span>' : '';
 const num = n => Number(n).toLocaleString('en-US');
 // foilPos(): a spot on the foil sheet that is fixed for each decal, so neighbours do not all show the same colours
 function foilPos(d) { return `--fx:${(d.no * 37) % 101}%;--fy:${(d.no * 61) % 101}%`; }
@@ -158,6 +163,9 @@ function filtered() {
     (!state.cat || d.category === state.cat) &&
     (state.ps || !d.psOnly) &&
     (!q || (d.name + ' ' + d.desc + ' ' + d.id).toLowerCase().includes(q)));
+  // keep one card per pair: the normal version when it matched, else the premium one
+  const matched = new Set(out.map(d => d.id));
+  for (let i = out.length - 1; i >= 0; i--) { const t = out[i].premium && twin(out[i]); if (t && matched.has(t.id)) out.splice(i, 1); }
   if (state.sort === 'name') out.sort((a, b) => a.name.localeCompare(b.name) || a.no - b.no);
   else if (state.sort === 'rarity') out.sort((a, b) => b.rarity - a.rarity || a.no - b.no);
   else out.sort((a, b) => a.no - b.no);
@@ -166,10 +174,10 @@ function filtered() {
 
 function renderGrid() {
   list = filtered();
-  $('count').textContent = `${list.length} of ${DECALS.length} decals`;
+  $('count').textContent = `${list.length} cards covering ${list.reduce((n, d) => n + (!d.premium && twin(d) && state.kind === 'all' ? 2 : 1), 0)} of ${DECALS.length} decals`;
   $('grid').innerHTML = list.length ? list.map(d =>
     `<button class="card" data-id="${d.id}"><div class="shot"><div class="foilBox"><img loading="lazy" alt="" src="${img(d)}">${d.premium ? `<i class="foil" data-m="${img(d)}" data-pos="${foilPos(d)}"></i>` : ''}</div></div>
-      <div class="meta"><div class="name">${esc(d.name)}</div><div>${stars(d.rarity)}${tags(d)}</div></div></button>`).join('')
+      <div class="meta"><div class="name">${esc(d.name)}</div><div>${stars(d.rarity)}${tags(d)}${state.kind === 'all' ? pairTag(d) : ''}</div></div></button>`).join('')
     : '<div class="empty">No decals match these filters.</div>';
 }
 
@@ -182,19 +190,21 @@ function openDecal(id) {
   $('d-img').src = img(d);
   $('d-foil').style.cssText = d.premium ? `--m:url(${img(d)});${foilPos(d)}` : '';
   $('d-desc').textContent = d.desc;
-  const twin = BY_ID[d.premium ? d.id.replace(/_P$/, '') : d.id + '_P'];
+  const other = twin(d);
+  $('d-ver').hidden = !other;
+  for (const b of $('d-ver').querySelectorAll('button')) b.setAttribute('aria-pressed', String((b.dataset.v === 'premium') === !!d.premium));
   const rows = [['Id', esc(d.id)], ['Category', esc(d.category)], ['Source', esc(d.source)]];
   if (d.unlock) rows.push(['Unlocked by', d.unlock.map(u => `${u.count} × ` + (u.id ? `<a href="mushrooms.html#${u.id}">${esc(u.mushroom)}</a>` : esc(u.mushroom))).join(', ')]);
   if (d.stewOdds != null) rows.push(['Stew odds', d.stewOdds + '%']);
   if (d.buy) rows.push(['Buy', num(d.buy) + ' Kill Coins']);
   if (d.sell) rows.push(['Sell', [d.sell.coins ? num(d.sell.coins) + ' Kill Coins' : '', d.sell.recycle ? num(d.sell.recycle) + ' recycle points' : ''].filter(Boolean).join(' or ')]);
-  if (twin && twin !== d) rows.push([twin.premium ? 'Premium version' : 'Normal version', `<a href="#${twin.id}">${esc(twin.name)}</a>`]);
   $('d-info').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + d.id);
 }
 function step(n) {
-  const at = list.findIndex(d => d.id === state.open);
+  const cur = BY_ID[state.open], other = cur && twin(cur);
+  const at = list.findIndex(d => d.id === state.open || (other && d.id === other.id));
   if (list.length) openDecal(list[(Math.max(at, 0) + n + list.length) % list.length].id);
 }
 const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
@@ -222,6 +232,7 @@ $('foil').addEventListener('change', e => document.body.classList.toggle('nofoil
 $('grid').addEventListener('load', armFoil, true);
 $('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openDecal(c.dataset.id); });
 $('d-close').addEventListener('click', closeDlg);
+$('d-ver').addEventListener('click', e => { const b = e.target.closest('button'), d = BY_ID[state.open], t = d && twin(d); if (b && t && (b.dataset.v === 'premium') !== !!d.premium) openDecal(t.id); });
 $('d-prev').addEventListener('click', () => step(-1));
 $('d-next').addEventListener('click', () => step(1));
 $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });

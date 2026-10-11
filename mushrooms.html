@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LET IT DIE Mushrooms &amp; Beasts</title>
+<title>LET IT DIE Mushrooms & Beasts</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="website">
-<meta property="og:title" content="LET IT DIE Mushrooms &amp; Beasts">
-<meta property="og:description" content="Every mushroom and edible beast in LET IT DIE: what it does raw and grilled, and where it is found.">
+<meta property="og:title" content="LET IT DIE Mushrooms & Beasts">
+<meta property="og:description" content="Every mushroom and edible beast in LET IT DIE: what it does raw and grilled, and which floors it appears on.">
 <meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="description" content="Every mushroom and edible beast in LET IT DIE: what it does raw and grilled, and where it is found.">
+<meta name="description" content="Every mushroom and edible beast in LET IT DIE: what it does raw and grilled, and which floors it appears on.">
 <style>
   :root {
     --bg: #0a0a0a; --bg-raised: #131313; --panel: #161616;
@@ -22,6 +22,7 @@
     --display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
   nav.pages { display: flex; gap: 6px; margin-bottom: 18px; }
@@ -95,14 +96,19 @@
   .pair figure { margin: 0; flex: 1; background: var(--stage); border: 1px solid var(--panel-border); text-align: center; }
   .pair img { width: 100%; display: block; }
   .pair figcaption { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; padding: 2px 0 4px; }
+  .tiers { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; }
+  .tiers button { background: var(--bg-raised); color: var(--text-dim); border: 1px solid var(--panel-border); font: inherit; font-size: 11.5px; padding: 3px 8px; cursor: pointer; }
+  .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
+  .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .usedby { max-height: 150px; overflow: auto; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <nav class="pages"><a href="./">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="mushrooms.html" aria-current="page">Mushrooms</a></nav>
+  <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="mushrooms.html" aria-current="page">Mushrooms</a></nav>
   <header>
     <h1>LET IT DIE <span>Mushrooms &amp; Beasts</span></h1>
-    <p>Every mushroom and edible beast in the game data: what it does raw and grilled, where it is found, and which decals it unlocks.</p>
+    <p>Every mushroom and edible beast in the game data: what it does raw and grilled, which floors it appears on, and which decals it unlocks.</p>
   </header>
 
   <div class="bar">
@@ -110,6 +116,7 @@
     <div class="seg"><span class="lbl">Show</span><div class="btns" id="kind">
       <button data-v="" aria-pressed="true">All</button><button data-v="mushroom" aria-pressed="false">Mushrooms</button><button data-v="beast" aria-pressed="false">Beasts</button>
     </div></div>
+    <label class="seg"><span class="lbl">Floor</span><input type="number" id="floor" min="1" max="451" placeholder="any" style="width:70px;background:var(--bg-raised);color:var(--text);border:1px solid var(--panel-border);font:inherit;font-size:12px;padding:6px 8px;"></label>
     <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option></select></label>
   </div>
   <div id="count"></div>
@@ -117,7 +124,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_mushroom</code> and <code>master_beast</code> tables with their effect tables; icons and artwork from its menu graphics. Effect durations are the stored values, taken to be seconds. Not every mushroom has a large artwork or a grilled form.</p>
+    <p>Data comes from the game's <code>master_mushroom</code> and <code>master_beast</code> tables with their effect and spawn tables; icons and artwork from its menu graphics. Floors are the ones whose random spawn list includes the entry; some entries are instead placed at fixed spots in a zone, or only come from beasts, events or the shop, and show no floors. Effect durations are the stored values, taken to be seconds. Not every mushroom has a large artwork or a grilled form.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -129,7 +136,7 @@
   </div>
   <div class="dlg-body">
     <div><div class="big wide"><img id="d-img" alt=""></div><div id="d-extra"></div></div>
-    <div><p class="desc" id="d-desc"></p><dl id="d-info"></dl></div>
+    <div><div class="tiers" id="d-tiers"></div><p class="desc" id="d-desc"></p><dl id="d-info"></dl></div>
   </div>
 </dialog>
 
@@ -152,17 +159,28 @@ function bindSeg(id, key) {
   });
 }
 const fx = e => e ? esc(e.name) + (e.seconds ? ` (${e.seconds.join('–')} s)` : '') : 'none';
+const ZONE = { Metro: 'floors 1–10', Arcade: 'floors 11–20', Amusement: 'floors 21–30', Rooftop: 'floors 31–40', Hazama: 'floors 41–50', Heaven: 'Tengoku' };
+const TOWER = 50;                 // floors above this are Tengoku, where spawn lists repeat in a cycle
 const ALL = SHROOMS.mushrooms.map(m => Object.assign({ kind: 'mushroom' }, m)).concat(SHROOMS.beasts.map(b => Object.assign({ kind: 'beast' }, b)));
 const BY_ID = Object.fromEntries(ALL.map(d => [d.id, d]));
 const text = d => [d.name, d.id, d.desc, d.grilledName, d.raw && d.raw.effect && d.raw.effect.name, d.grilled && d.grilled.name, d.grilled && d.grilled.effect && d.grilled.effect.name,
   ...Object.values(d.effects || {}).flat()].filter(Boolean).join(' ').toLowerCase();
-const state = { q: '', kind: '', sort: 'game', open: null };
+const onFloor = (d, n) => (d.floors || []).some(([a, b]) => n >= a && n <= b);
+function floorsText(d) {
+  const parts = [];
+  const tower = (d.floors || []).filter(([a]) => a <= TOWER).map(([a, b]) => a === Math.min(b, TOWER) ? String(a) : `${a}–${Math.min(b, TOWER)}`);
+  if (tower.length) parts.push('Floors ' + tower.join(', '));
+  const high = (d.floors || []).reduce((n, [a, b]) => n + Math.max(0, b - Math.max(a, TOWER + 1) + 1), 0);
+  if (high) parts.push(`Tengoku: ${high} of its 401 floors`);
+  return parts.join('; ');
+}
+const state = { q: '', kind: '', floor: '', sort: 'game', open: null };
 let list = [];
 function renderGrid() {
-  const q = state.q.trim().toLowerCase();
-  list = ALL.filter(d => (!state.kind || d.kind === state.kind) && (!q || text(d).includes(q)));
+  const q = state.q.trim().toLowerCase(), fl = +state.floor;
+  list = ALL.filter(d => (!state.kind || d.kind === state.kind) && (!q || text(d).includes(q)) && (!fl || onFloor(d, fl)));
   if (state.sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
-  $('count').textContent = `${list.length} of ${ALL.length} entries`;
+  $('count').textContent = `${list.length} of ${ALL.length} entries` + (fl ? ` that can spawn on floor ${fl}` : '');
   let group = null, html = '';
   for (const d of list) {
     if (state.sort === 'game' && d.kind !== group) { group = d.kind; html += `<h2>${group === 'mushroom' ? 'Mushrooms' : 'Beasts'}</h2>`; }
@@ -180,9 +198,12 @@ function openItem(id) {
   $('d-tags').innerHTML = `<span class="tag">${d.kind === 'mushroom' ? 'Mushroom' : 'Beast'}</span>`;
   $('d-img').src = pic(d.art || d.icon);
   $('d-desc').textContent = d.desc || '';
+  $('d-tiers').innerHTML = '';
   $('d-extra').innerHTML = d.art ? `<div class="pair"><figure><img alt="" src="${pic(d.icon)}"><figcaption>Raw</figcaption></figure>${d.iconGrilled ? `<figure><img alt="" src="${pic(d.iconGrilled)}"><figcaption>Grilled</figcaption></figure>` : ''}</div>` : '';
   const rows = [['Id', esc(d.id)]];
-  if (d.found) rows.push(['Found', esc(d.found)]);
+  if (d.found) rows.push(['Game says', esc(d.found)]);
+  if (floorsText(d)) rows.push(['Spawns on', floorsText(d)]);
+  if (d.zones) rows.push(['Placed in', d.zones.map(z => `${esc(z === 'Heaven' ? 'Tengoku' : z)}${z === 'Heaven' ? '' : ' (' + ZONE[z] + ')'}`).join(', ')]);
   if (d.size) rows.push(['Size', esc(d.size)]);
   if (d.kind === 'mushroom') {
     rows.push(['Raw', fx(d.raw.effect) + (d.raw.sideEffect ? `; may also cause ${fx(d.raw.sideEffect)}` : '')]);
@@ -201,8 +222,13 @@ function openItem(id) {
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + d.id);
 }
+function step(n) {
+  const at = list.findIndex(d => d.id === state.open);
+  if (list.length) openItem(list[(Math.max(at, 0) + n + list.length) % list.length].id);
+}
 bindSeg('kind', 'kind');
 $('q').addEventListener('input', e => { state.q = e.target.value; renderGrid(); });
+$('floor').addEventListener('input', e => { state.floor = e.target.value; renderGrid(); });
 $('sort').addEventListener('change', e => { state.sort = e.target.value; renderGrid(); });
 $('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openItem(c.dataset.id); });
 $('d-close').addEventListener('click', closeDlg);
@@ -211,10 +237,6 @@ $('d-next').addEventListener('click', () => step(1));
 $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });
 $('dlg').addEventListener('close', clearHash);
 $('dlg').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
-function step(n) {
-  const at = list.findIndex(d => d.id === state.open);
-  if (list.length) openItem(list[(Math.max(at, 0) + n + list.length) % list.length].id);
-}
 window.addEventListener('hashchange', () => openItem(decodeURIComponent(location.hash.slice(1))));
 renderGrid();
 openItem(decodeURIComponent(location.hash.slice(1)));

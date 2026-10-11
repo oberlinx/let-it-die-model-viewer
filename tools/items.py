@@ -98,6 +98,18 @@ for p in parts:
     if p['platform']: g['psOnly'] = True
     gear.append(g)
 
+# R&D and upgrade costs (master_part_research). mateN_id are the materials; craft_* is the one-off development cost,
+# lvup_* the cost of each upgrade level (a base amount that grows with level). Spirit = SPLithium.
+research = {r['ptid']: r for r in rows('select * from master_part_research')}
+for g in gear:
+    r = research.get(g['id'])
+    if not r or not r['is_open']: continue
+    mats = [(r['mate%d_id' % i], r['craft_mate%d_num' % i], r['lvup_mate%d_num' % i], r['lvup_mate%d_add_num' % i]) for i in range(1, 6) if r['mate%d_id' % i]]
+    craft = [[m, int(n)] for m, n, _, _ in mats if n >= 1]
+    if craft or r['craft_spirit']: g['craft'] = dict(spl=r['craft_spirit'], mats=craft)
+    up = [[m, int(n)] for m, _, n, add in mats if n >= 1 or add > 0]
+    if up or r['lvup_spirit']: g['upgrade'] = dict(spl=r['lvup_spirit'], mats=up)
+
 MAT = {'ITTP_MATERIAL': 'Material', 'ITTP_HEAL': 'Consumable', 'ITTP_BACK': 'Consumable', 'ITTP_BIV': 'Consumable', 'ITTP_WOOD': 'Material'}
 materials = []
 for it in rows("select * from master_item where itemtype != 'ITTP_RMAP' order by sort_no, itemid"):
@@ -128,6 +140,42 @@ unlocks = {}
 for r in rows('select o.sklid, o.msrid, o.cnt, s.name from master_skill_open_mushroom o join master_skill s on s.id = o.sklid order by s.no'):
     unlocks.setdefault(r['msrid'], []).append(dict(id=r['sklid'], name=clean(tx(r['name'])), count=r['cnt']))
 
+def spawn_floors(gen_col, gen_table, id_col):
+    """{thing id: sorted floor numbers} from each floor's spawn list (master_floor.<gen_col> -> <gen_table>)."""
+    members = {}
+    for r in rows('select id, %s as thing, freq from %s' % (id_col, gen_table)):
+        if r['freq'] > 0: members.setdefault(r['id'], set()).add(r['thing'])
+    out = {}
+    for r in rows('select distinct no, %s as gen from master_floor where no > 0' % gen_col):
+        for thing in members.get(r['gen'], ()): out.setdefault(thing, set()).add(r['no'])
+    return {k: sorted(v) for k, v in out.items()}
+
+def ranges(nums):
+    """[1, 2, 3, 7, 9, 10] -> [[1, 3], [7, 7], [9, 10]]"""
+    out = []
+    for n in nums:
+        if out and n == out[-1][1] + 1: out[-1][1] = n
+        else: out.append([n, n])
+    return out
+
+def placed_zones(stage_table, gen_table, id_col):
+    """{thing id: zone names} for things placed at fixed points of a zone (master_stage_*), directly or through a spawn list."""
+    zone = {r['stgid']: r['stgpfx'] for r in rows('select distinct stgid, stgpfx from master_floor')}
+    members = {}
+    for r in rows('select id, %s as thing, freq from %s' % (id_col, gen_table)):
+        if r['freq'] > 0: members.setdefault(r['id'], set()).add(r['thing'])
+    out = {}
+    for r in rows('select stgid, %s as thing, genid from %s' % (id_col, stage_table)):
+        for thing in ({r['thing']} if r['thing'] else set()) | members.get(r['genid'], set()):
+            if zone.get(r['stgid']): out.setdefault(thing, set()).add(zone[r['stgid']])
+    order = ['Metro', 'Arcade', 'Amusement', 'Rooftop', 'Hazama', 'Heaven']
+    return {k: sorted(v, key=lambda z: order.index(z) if z in order else 99) for k, v in out.items()}
+
+msr_zones = placed_zones('master_stage_mushroom', 'master_mushroom_gen', 'msrid')
+bst_zones = placed_zones('master_stage_beast', 'master_beast_gen', 'bstid')
+msr_floors = spawn_floors('msrgen', 'master_mushroom_gen', 'msrid')
+bst_floors = spawn_floors('bstgen', 'master_beast_gen', 'bstid')
+
 mushrooms = []
 for m in rows('select * from master_mushroom order by idx'):
     name = clean(tx(m['c_name']) or '')
@@ -143,6 +191,8 @@ for m in rows('select * from master_mushroom order by idx'):
         d['grilled'] = dict(name=grilled, effect=effect(m['r_pefcid']), hp=m['r_recvhp'])
         if m['r_nefcid'] and effect(m['r_nefcid']): d['grilled']['sideEffect'] = dict(effect(m['r_nefcid']), chance=m['r_nefcrate'])
     if m['id'] in unlocks: d['unlocks'] = unlocks[m['id']]
+    if m['id'] in msr_floors: d['floors'] = ranges(msr_floors[m['id']])
+    if m['id'] in msr_zones: d['zones'] = msr_zones[m['id']]
     mushrooms.append(d)
 
 befc = {r['id']: clean(tx(r['name'])) for r in rows('select id, name from master_beast_efc')}
@@ -160,7 +210,14 @@ for b in rows('select * from master_beast order by idx'):
     if dump_image('UI_Icon_%s_SF.upk' % b['id'], 'TX_UI_Image_%s_R' % b['id'], b['id'] + '_R'): d['iconGrilled'] = b['id'] + '_R'
     if dump_image('UI_Enma_%s_SF.upk' % b['id'], 'TX_UI_Image_%s_Art' % b['id'], b['id'] + '_Art'): d['art'] = b['id'] + '_Art'
     if b['rwdmsrid'] in msr_names: d['drops'] = dict(id=b['rwdmsrid'], name=msr_names[b['rwdmsrid']])
+    if b['id'] in bst_floors: d['floors'] = ranges(bst_floors[b['id']])
+    if b['id'] in bst_zones: d['zones'] = bst_zones[b['id']]
     beasts.append(d)
 json.dump(dict(mushrooms=mushrooms, beasts=beasts), open(os.path.join(OUT, 'mushrooms.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+masks = []
+for n in range(1, 9):
+    pid = 'PT_GAS_HEAD_%03d' % n
+    masks.append(dict(no=n, name=names.get(pid, ''), icon=icon(pid), female='ASSET_NF_GAS_HEAD_%03d' % n, male='ASSET_NM_GAS_HEAD_%03d' % n))
+json.dump(masks, open(os.path.join(OUT, 'gasmasks.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 json.dump(images, open(os.path.join(OUT, 'images.json'), 'w'))
 print(len(mushrooms), 'mushrooms,', len(beasts), 'beasts,', len(images), 'images')

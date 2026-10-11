@@ -1,17 +1,18 @@
-# LET IT DIE Fighter Models
+# LET IT DIE Viewer
 
-A single static page that shows the 16 fighter body models from LET IT DIE next to their internal ids
-(`BODY_FEMALE_001` … `BODY_MALE_008`). The game never displays these names, so this is a visual lookup
-for the model picker in the [LET IT DIE save editor](https://oberlinx.github.io/let-it-die-save-editor/).
+A static site showing what things in LET IT DIE look like and what the game data says about them. It is a companion to
+the [LET IT DIE save editor](https://oberlinx.github.io/let-it-die-save-editor/): the ids shown are the ones the editor and the save use.
 
-`decals.html` is a searchable catalogue of all 368 skill decals: icon, effect, rarity, category, where each one
-comes from, and links between the normal and premium versions.
+| Page | What it shows |
+|---|---|
+| `index.html` | Home: the four sections and one search box across all of them |
+| `models.html` | The 16 fighter bodies (photos, rotatable 3D view in three poses, voices, taunts, side-by-side compare) and the 8 gas masks |
+| `decals.html` | All 368 skill decals, a normal and premium pair sharing one card |
+| `gear.html` | Weapons, armour and materials: stats, upgrade lines, armour sets, development and upgrade costs |
+| `mushrooms.html` | Mushrooms and edible beasts: effects raw and grilled, and the floors they spawn on |
 
-`gear.html` lists every weapon, armour piece and crafting material with its icon and stats, and `mushrooms.html` every mushroom
-and edible beast with what it does raw and grilled. Both are made by `tools/items.py` (data and raw icons) and
-`tools/item-images.html` (WebP conversion, served by `serve.py`).
-
-Open `index.html`, or serve the folder with GitHub Pages.
+Open `index.html`, or serve the folder with GitHub Pages. `index.html`, `gear.html` and `mushrooms.html` are written by
+`tools/make_pages.py`; edit that script rather than those files.
 
 ## How the images were made
 

@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LET IT DIE Fighter Models</title>
+<title>LET IT DIE Viewer</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="website">
-<meta property="og:title" content="LET IT DIE Fighter Models">
-<meta property="og:description" content="All 16 fighter models with their internal ids, voices, taunts and a rotatable 3D view.">
+<meta property="og:title" content="LET IT DIE Viewer">
+<meta property="og:description" content="Fighter models, skill decals, gear, mushrooms and beasts from LET IT DIE, taken from the game data.">
 <meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="description" content="All 16 LET IT DIE fighter body models with their internal names and in-game look.">
+<meta name="description" content="Fighter models, skill decals, gear, mushrooms and beasts from LET IT DIE, taken from the game data.">
 <style>
   :root {
     --bg: #0a0a0a; --bg-raised: #131313; --panel: #161616;
     --panel-border: #333333; --panel-border-bright: #4d4d4d;
     --text: #e8e8e8; --text-dim: #9a9a9a; --text-faint: #6a6a6a;
-    --accent: #a8291f; --accent-bright: #d6392c;
+    --accent: #a8291f; --accent-bright: #d6392c; --star: #e2b33c;
     --stage: radial-gradient(ellipse at 50% 35%, #3a3d44 0%, #1d1f23 70%);
     --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     --display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
@@ -32,453 +32,160 @@
   header h1 { font-family: var(--display); font-size: 30px; letter-spacing: 0.5px; margin: 0 0 4px; }
   header h1 span { color: var(--accent-bright); }
   header p { margin: 0; color: var(--text-dim); max-width: 70ch; }
-  .bar { display: flex; flex-wrap: wrap; gap: 16px 28px; margin: 22px 0 18px; align-items: center; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 22px 0 6px; align-items: center; }
   .seg { display: flex; align-items: center; gap: 8px; }
-  .seg .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
   .seg .btns { display: flex; border: 1px solid var(--panel-border); }
-  .seg button {
-    background: var(--bg-raised); color: var(--text-dim); border: 0; border-right: 1px solid var(--panel-border);
-    font: inherit; font-size: 12px; padding: 6px 12px; cursor: pointer;
-  }
+  .seg button { background: var(--bg-raised); color: var(--text-dim); border: 0; border-right: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 6px 11px; cursor: pointer; }
   .seg button:last-child { border-right: 0; }
   .seg button:hover { color: var(--text); }
   .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
-  .grid h2 {
-    grid-column: 1 / -1; font-family: var(--display); font-size: 18px; margin: 14px 0 0; padding-bottom: 6px;
-    border-bottom: 1px solid var(--panel-border); letter-spacing: 0.5px;
-  }
-  .card {
-    background: var(--panel); border: 1px solid var(--panel-border); padding: 0; color: inherit; font: inherit;
-    text-align: left; cursor: pointer; display: flex; flex-direction: column; min-width: 0;
-  }
+  input[type=search], select { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 6px 8px; }
+  input[type=search] { width: 220px; max-width: 100%; }
+  input[type=search]:focus, select:focus { outline: none; border-color: var(--accent-bright); }
+  label.chk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer; }
+  #count { color: var(--text-faint); font-size: 12px; margin: 10px 0 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--panel-border); padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; min-width: 0; }
   .card:hover, .card:focus-visible { border-color: var(--accent-bright); outline: none; }
-  .cardWrap { position: relative; display: flex; min-width: 0; }
-  .cardWrap .card { flex: 1; }
-  .pick { position: absolute; top: 6px; right: 6px; display: flex; align-items: center; gap: 4px; padding: 2px 6px; font-size: 11px; color: var(--text-dim); background: rgba(10, 10, 10, 0.72); border: 1px solid var(--panel-border); cursor: pointer; }
-  .pick:hover { color: var(--text); }
-  .pick input { accent-color: var(--accent); margin: 0; }
-  #cmp-bar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; background: var(--panel); border-top: 1px solid var(--panel-border-bright); }
-  #cmp-bar .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-  #cmp-bar button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 5px 11px; cursor: pointer; }
-  #cmp-bar button:hover:not(:disabled) { border-color: var(--accent-bright); }
-  #cmp-bar button:disabled { opacity: 0.45; cursor: default; }
-  #cmp-go:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .ccols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .ccols h3 { font-family: var(--display); font-size: 18px; margin: 0 0 8px; }
-  .ccols h3 .id { font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--text-dim); margin-left: 6px; }
-  .cviews { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 6px; }
-  .cviews figure { margin: 0; background: var(--stage); border: 1px solid var(--panel-border); position: relative; }
-  .cviews img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .cviews figcaption { position: absolute; left: 6px; top: 4px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
-  @media (max-width: 720px) { .cviews { grid-template-columns: 1fr 1fr; } }
-  .card .shot { background: var(--stage); aspect-ratio: 1; overflow: hidden; }
-  .card .shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .card .meta { padding: 9px 11px 10px; border-top: 1px solid var(--panel-border); }
-  .card .name { font-family: var(--display); font-size: 18px; font-weight: 700; }
-  .card .id { color: var(--text-dim); font-size: 12px; overflow-wrap: anywhere; }
+  .card .shot { background: var(--stage); aspect-ratio: 1; padding: 10px; }
+  /* Premium decals: the game's holographic foil, clipped to the sticker's own shape. --m is the icon, set once the
+     card's own image has loaded. */
+  .foilBox { position: relative; width: 100%; height: 100%; }
+  .foil { position: absolute; inset: 0; pointer-events: none; opacity: 0.15; mix-blend-mode: hard-light;
+    background: url(img/foil.jpg) var(--fx, 50%) var(--fy, 50%) / 240% auto;
+    -webkit-mask: var(--m, none) center / 100% 100% no-repeat; mask: var(--m, none) center / 100% 100% no-repeat; }
+  .foil:not([style*="--m"]) { display: none; }
+  body.nofoil .foil { display: none; }
+  .card img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .card .meta { padding: 7px 9px 8px; border-top: 1px solid var(--panel-border); }
+  .card .name { font-size: 12.5px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+  .stars { color: var(--star); font-size: 11px; letter-spacing: 1px; }
+  .stars i { color: var(--panel-border-bright); font-style: normal; }
+  .tag { display: inline-block; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; padding: 0 5px; border: 1px solid var(--panel-border-bright); color: var(--text-dim); margin-left: 4px; }
+  .tag.prem { border-color: var(--star); color: var(--star); }
+  .empty { grid-column: 1 / -1; color: var(--text-dim); padding: 30px 0; }
   footer { margin-top: 36px; color: var(--text-faint); font-size: 12px; max-width: 90ch; }
-  footer a, header a { color: var(--text-dim); }
+  footer a { color: var(--text-dim); }
 
-  dialog {
-    background: var(--panel); color: var(--text); border: 1px solid var(--panel-border-bright); padding: 0;
-    width: min(1100px, calc(100vw - 24px)); max-height: calc(100vh - 24px);
-  }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--panel-border-bright); padding: 0; width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 24px); }
   dialog::backdrop { background: rgba(0, 0, 0, 0.8); }
-  .dlg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 16px; border-bottom: 1px solid var(--panel-border); }
-  .dlg-head h2 { font-family: var(--display); font-size: 24px; margin: 0; }
+  .dlg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-bottom: 1px solid var(--panel-border); }
+  .dlg-head h2 { font-family: var(--display); font-size: 22px; margin: 0; }
   .dlg-head .nav { margin-left: auto; display: flex; gap: 6px; }
-  .dlg-head .nav button {
-    background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit;
-    padding: 4px 11px; cursor: pointer;
-  }
+  .dlg-head .nav button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; padding: 4px 11px; cursor: pointer; }
   .dlg-head .nav button:hover { border-color: var(--accent-bright); }
-  .dlg-body { padding: 14px 16px 16px; overflow: auto; }
-  .views { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 10px; }
-  .views figure { margin: 0; background: var(--stage); border: 1px solid var(--panel-border); position: relative; }
-  .views img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .views figcaption {
-    position: absolute; left: 8px; top: 6px; font-size: 11px; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 1px;
-  }
-  .voice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--panel-border); }
-  .voice .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-  .clips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .clips button, button.taunt { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer; }
-  .clips button:hover, button.taunt:hover { border-color: var(--accent-bright); }
-  .stage3d .canvasBox { height: min(62vh, 560px); background: var(--stage); border: 1px solid var(--panel-border); }
-  .stage3d canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
-  .stage3d canvas:active { cursor: grabbing; }
-  .stageBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 8px; }
-  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 14px 0 0; font-size: 13px; }
+  .dlg-body { padding: 16px; display: grid; grid-template-columns: 220px 1fr; gap: 18px; overflow: auto; }
+  .dlg-body .big { background: var(--stage); border: 1px solid var(--panel-border); padding: 14px; align-self: start; }
+  .dlg-body .big img { width: 100%; display: block; }
+  .dlg-body p.desc { margin: 0 0 12px; font-size: 14px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 13px; }
   dt { color: var(--text-faint); }
   dd { margin: 0; overflow-wrap: anywhere; }
-  @media (max-width: 720px) {
-    .views { grid-template-columns: 1fr 1fr; }
+  dd a { color: var(--text); }
+  @media (max-width: 620px) {
+    .dlg-body { grid-template-columns: 1fr; }
+    .dlg-body .big { max-width: 200px; }
     header h1 { font-size: 24px; }
   }
+  .card .shot.tall { aspect-ratio: 108 / 132; padding: 6px; }
+  .sub { color: var(--text-dim); font-size: 11px; }
+  .grid h2 { grid-column: 1 / -1; font-family: var(--display); font-size: 18px; margin: 14px 0 0; padding-bottom: 6px; border-bottom: 1px solid var(--panel-border); }
+  .dlg-body .big.wide { padding: 0; }
+  .pair { display: flex; gap: 8px; margin-top: 8px; }
+  .pair figure { margin: 0; flex: 1; background: var(--stage); border: 1px solid var(--panel-border); text-align: center; }
+  .pair img { width: 100%; display: block; }
+  .pair figcaption { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; padding: 2px 0 4px; }
+  .tiers { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; }
+  .tiers button { background: var(--bg-raised); color: var(--text-dim); border: 1px solid var(--panel-border); font: inherit; font-size: 11.5px; padding: 3px 8px; cursor: pointer; }
+  .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
+  .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .usedby { max-height: 150px; overflow: auto; }
+  .hero { margin: 8px 0 22px; }
+  .hero input { width: min(560px, 100%); font-size: 15px; padding: 10px 12px; }
+  .sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .section { display: block; background: var(--panel); border: 1px solid var(--panel-border); padding: 14px; color: inherit; text-decoration: none; }
+  .section:hover { border-color: var(--accent-bright); }
+  .section h2 { font-family: var(--display); font-size: 20px; margin: 0 0 2px; }
+  .section p { margin: 0 0 10px; color: var(--text-dim); font-size: 12.5px; }
+  .section .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .section .strip div { background: var(--stage); aspect-ratio: 1; padding: 4px; }
+  .section .strip img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  #results h2 { font-family: var(--display); font-size: 16px; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--panel-border); }
+  .hit { display: flex; align-items: center; gap: 10px; padding: 5px 6px; color: inherit; text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+  .hit:hover { background: var(--bg-raised); }
+  .hit img, .hit .noimg { width: 36px; height: 36px; object-fit: contain; flex: none; background: var(--stage); }
+  .hit .id { margin-left: auto; color: var(--text-faint); font-size: 11px; }
+  .more { color: var(--text-faint); font-size: 12px; padding: 4px 6px; }
 </style>
 </head>
 <body>
+<script>
+// Old links from the save editor point at the site root with a model id: send those to the models page.
+if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.hash);
+</script>
 <div class="wrap">
-  <nav class="pages"><a href="./" aria-current="page">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
+  <nav class="pages"><a href="./" aria-current="page">Home</a><a href="models.html">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
   <header>
-    <h1>LET IT DIE <span>Fighter Models</span></h1>
-    <p>The game never shows a name for its 16 fighter bodies. This page pairs each internal model id with what it looks like, rendered from the game's own meshes and textures.</p>
+    <h1>LET IT DIE <span>Viewer</span></h1>
+    <p>What things in the game look like and what the data says about them, taken from the game's own files.</p>
   </header>
 
-  <div class="bar">
-    <div class="seg"><span class="lbl">Show</span><div class="btns" id="filter">
-      <button data-v="all" aria-pressed="true">All</button><button data-v="female" aria-pressed="false">Female</button><button data-v="male" aria-pressed="false">Male</button>
-    </div></div>
-    <div class="seg"><span class="lbl">View</span><div class="btns" id="view">
-      <button data-v="face" aria-pressed="true">Face</button><button data-v="side" aria-pressed="false">Angle</button><button data-v="body" aria-pressed="false">Body</button><button data-v="back" aria-pressed="false">Back</button>
-    </div></div>
-    <div class="seg"><span class="lbl">Gas mask</span><div class="btns" id="mask" data-seg="mask">
-      <button data-v="on" aria-pressed="true">On</button><button data-v="off" aria-pressed="false">Off</button>
-    </div></div>
-  </div>
+  <div class="hero"><input type="search" id="q" placeholder="Search everything: a decal, weapon, mushroom, model…" aria-label="Search the whole site" autofocus></div>
+  <div id="results"></div>
 
-  <main class="grid" id="grid"></main>
+  <main class="sections" id="sections">
+    <a class="section" href="models.html"><h2>Fighter Models</h2><p>The 16 fighter bodies and 8 gas masks: looks, a rotatable 3D view, voices and taunts.</p>
+      <div class="strip"><div><img alt="" loading="lazy" src="img/BODY_FEMALE_001_face.webp"></div><div><img alt="" loading="lazy" src="img/BODY_MALE_004_face.webp"></div><div><img alt="" loading="lazy" src="img/BODY_FEMALE_007_face.webp"></div><div><img alt="" loading="lazy" src="img/BODY_MALE_008_face.webp"></div></div></a>
+    <a class="section" href="decals.html"><h2>Skill Decals</h2><p>All 368 decals: icon, effect, rarity, where each comes from, normal and premium.</p>
+      <div class="strip"><div><img alt="" loading="lazy" src="img/decals/SKL_DEATH_PROOF.webp"></div><div><img alt="" loading="lazy" src="img/decals/SKL_ATK_CHARGED.webp"></div><div><img alt="" loading="lazy" src="img/decals/SKL_MONEYUP_01.webp"></div><div><img alt="" loading="lazy" src="img/decals/SKL_SHOVEL_ABILITY_UP.webp"></div></div></a>
+    <a class="section" href="gear.html"><h2>Gear</h2><p>1,373 weapons and armour pieces plus 110 materials: stats, upgrade lines and crafting costs.</p>
+      <div class="strip"><div><img alt="" loading="lazy" src="img/items/PT_ARM_WP020_001.webp"></div><div><img alt="" loading="lazy" src="img/items/PT_MIL_HEAD_010.webp"></div><div><img alt="" loading="lazy" src="img/items/PT_SPO_TOPS_006.webp"></div><div><img alt="" loading="lazy" src="img/items/ITMT_STONE_TBR_5.webp"></div></div></a>
+    <a class="section" href="mushrooms.html"><h2>Mushrooms &amp; Beasts</h2><p>63 mushrooms and 24 edible beasts: effects raw and grilled, and the floors they appear on.</p>
+      <div class="strip"><div><img alt="" loading="lazy" src="img/items/MSR_016.webp"></div><div><img alt="" loading="lazy" src="img/items/MSR_051.webp"></div><div><img alt="" loading="lazy" src="img/items/BST_FROG.webp"></div><div><img alt="" loading="lazy" src="img/items/BST_TURTLE.webp"></div></div></a>
+  </main>
 
   <footer>
-    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in the game's idle stance (frame one of its neutral idle animation) with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The 3D view uses the same meshes with textures reduced to 1024 px. The game has 24 taunt animations and each model stores the id of one of them; ids step by three, so the two after it are listed as that model's as well, which is an inference rather than something the data states. Taunts reuse the ordinary voice clips; there are no separate taunt lines. A taunt button plays that taunt's voice clips and sound effects at the moments its animation triggers them.</p>
-    <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
+    <p>A companion to the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>: the ids shown throughout are the ones the editor and the save file use.</p>
+    <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
 
-<div id="cmp-bar" hidden><span class="lbl">Compare</span><span id="cmp-text"></span><button id="cmp-go">Compare side by side</button><button id="cmp-clear">Clear</button></div>
-
-<dialog id="cmp">
-  <div class="dlg-head">
-    <h2 id="c-name"></h2>
-    <div class="seg"><span class="lbl">Gas mask</span><div class="btns" id="c-mask" data-seg="mask"><button data-v="on" aria-pressed="true">On</button><button data-v="off" aria-pressed="false">Off</button></div></div>
-    <div class="nav"><button id="c-close">Close</button></div>
-  </div>
-  <div class="dlg-body"><div class="ccols" id="c-cols"></div></div>
-</dialog>
-
-<dialog id="dlg">
-  <div class="dlg-head">
-    <h2 id="d-name"></h2><span class="id" id="d-id"></span>
-    <div class="seg"><span class="lbl">Gas mask</span><div class="btns" id="d-mask" data-seg="mask"><button data-v="on" aria-pressed="true">On</button><button data-v="off" aria-pressed="false">Off</button></div></div>
-    <div class="seg"><div class="btns" id="d-mode" data-seg="mode"><button data-v="photos" aria-pressed="true">Photos</button><button data-v="3d" aria-pressed="false">3D</button></div></div>
-    <div class="nav"><button id="d-prev" aria-label="Previous model">&larr;</button><button id="d-next" aria-label="Next model">&rarr;</button><button id="d-close">Close</button></div>
-  </div>
-  <div class="dlg-body">
-    <div class="views" id="d-views"></div>
-    <div class="stage3d" id="d-3d" hidden>
-      <div class="canvasBox"><canvas id="d-canvas"></canvas></div>
-      <div class="stageBar"><span class="id" id="d-3d-note"></span>
-        <div class="seg"><div class="btns" id="d-preset"><button data-v="body" aria-pressed="false">Whole body</button><button data-v="face" aria-pressed="false">Face</button></div></div>
-      </div>
-    </div>
-    <dl id="d-info"></dl>
-    <div class="voice">
-      <span class="lbl">Voice samples</span>
-      <div class="clips" id="d-clips"></div>
-      <div class="seg"><div class="btns" id="d-lang" data-seg="lang"><button data-v="en" aria-pressed="true">English</button><button data-v="jp" aria-pressed="false">Japanese</button></div></div>
-      <span class="id" id="d-clip-note"></span>
-    </div>
-  </div>
-</dialog>
-
-<script src="data/taunts.js"></script>
-<script src="data/models3d.js"></script>
+<script src="data/decals.js"></script>
+<script src="data/gear.js"></script>
+<script src="data/mushrooms.js"></script>
+<script src="data/gasmasks.js"></script>
 <script>
-const MODELS = [
-  { id: 'BODY_FEMALE_001', voice: 'F01', voiceb: 5, provoke: 1, label: 'Female 1', gender: 'female', body: 'SK_CH_Main_NormalFemale', hair: 'SK_CH_Equip_NF_Hair0001' },
-  { id: 'BODY_FEMALE_002', voice: 'F02', voiceb: 5, provoke: 4, label: 'Female 2', gender: 'female', body: 'SK_CH_Main_NormalFemale0002', hair: 'SK_CH_Equip_NF_Hair0002' },
-  { id: 'BODY_FEMALE_003', voice: 'F03', voiceb: 6, provoke: 7, label: 'Female 3', gender: 'female', body: 'SK_CH_Main_NormalFemale0003', hair: 'SK_CH_Equip_NF_Hair0003' },
-  { id: 'BODY_FEMALE_004', voice: 'F04', voiceb: 6, provoke: 10, label: 'Female 4', gender: 'female', body: 'SK_CH_Main_NormalFemale0004', hair: 'SK_CH_Equip_NF_Hair0004' },
-  { id: 'BODY_FEMALE_005', voice: 'F05', voiceb: 7, provoke: 13, label: 'Female 5', gender: 'female', body: 'SK_CH_Main_NormalFemale0005', hair: 'SK_CH_Equip_NF_Hair0005' },
-  { id: 'BODY_FEMALE_006', voice: 'F06', voiceb: 7, provoke: 16, label: 'Female 6', gender: 'female', body: 'SK_CH_Main_NormalFemale0006', hair: 'SK_CH_Equip_NF_Hair0006' },
-  { id: 'BODY_FEMALE_007', voice: 'F07', voiceb: 8, provoke: 19, label: 'Female 7', gender: 'female', body: 'SK_CH_Main_NormalFemale0007', hair: 'SK_CH_Equip_NF_Hair0007' },
-  { id: 'BODY_FEMALE_008', voice: 'F08', voiceb: 8, provoke: 22, label: 'Female 8', gender: 'female', body: 'SK_CH_Main_NormalFemale0008', hair: 'SK_CH_Equip_NF_Hair0008' },
-  { id: 'BODY_MALE_001', voice: 'M01', voiceb: 1, provoke: 1, label: 'Male 1', gender: 'male', body: 'SK_CH_Main_NormalMale', hair: null },
-  { id: 'BODY_MALE_002', voice: 'M02', voiceb: 1, provoke: 4, label: 'Male 2', gender: 'male', body: 'SK_CH_Main_NormalMale0002', hair: null },
-  { id: 'BODY_MALE_003', voice: 'M03', voiceb: 2, provoke: 7, label: 'Male 3', gender: 'male', body: 'SK_CH_Main_NormalMale0003', hair: 'SK_CH_Equip_NM_Hair0001' },
-  { id: 'BODY_MALE_004', voice: 'M04', voiceb: 2, provoke: 10, label: 'Male 4', gender: 'male', body: 'SK_CH_Main_NormalMale0004', hair: 'SK_CH_Equip_NM_Hair0002' },
-  { id: 'BODY_MALE_005', voice: 'M05', voiceb: 3, provoke: 13, label: 'Male 5', gender: 'male', body: 'SK_CH_Main_NormalMale0005', hair: 'SK_CH_Equip_NM_Hair0003' },
-  { id: 'BODY_MALE_006', voice: 'M06', voiceb: 3, provoke: 16, label: 'Male 6', gender: 'male', body: 'SK_CH_Main_NormalMale0006', hair: null },
-  { id: 'BODY_MALE_007', voice: 'M07', voiceb: 4, provoke: 19, label: 'Male 7', gender: 'male', body: 'SK_CH_Main_NormalMale0007', hair: 'SK_CH_Equip_NM_Hair0007' },
-  { id: 'BODY_MALE_008', voice: 'M08', voiceb: 4, provoke: 22, label: 'Male 8', gender: 'male', body: 'SK_CH_Main_NormalMale0008', hair: 'SK_CH_Equip_NM_Hair0008' },
-];
-// Sample voice clips shipped in voice/<id>_<en|jp>_<key>.ogg
-const CLIPS = { attack: 'Attack', hurt: 'Hurt', rage: 'Rage', alert: 'Alert', death: 'Death' };
-const VIEWS = { face: 'Face', side: 'Angle', body: 'Body', back: 'Back' };
-const state = { filter: 'all', view: 'face', mask: 'on', lang: 'en', mode: 'photos', open: -1, pick: [] };
-let playing = null, tauntTimers = [], tauntSounds = [];
 const $ = id => document.getElementById(id);
-const img = (m, v) => `img/${m.id}_${v}${state.mask === 'off' && v !== 'back' ? '_nomask' : ''}.webp`;
-const shown = () => MODELS.filter(m => state.filter === 'all' || m.gender === state.filter);
-
-function renderGrid() {
-  const grid = $('grid');
-  grid.innerHTML = '';
-  let group = null;
-  for (const m of shown()) {
-    if (m.gender !== group) {
-      group = m.gender;
-      const h = document.createElement('h2');
-      h.textContent = group === 'female' ? 'Female' : 'Male';
-      grid.appendChild(h);
-    }
-    const wrap = document.createElement('div');
-    wrap.className = 'cardWrap';
-    const b = document.createElement('button');
-    b.className = 'card';
-    b.innerHTML = `<div class="shot"><img loading="lazy" alt="${m.label} ${VIEWS[state.view].toLowerCase()} view" src="${img(m, state.view)}"></div>
-      <div class="meta"><div class="name">${m.label}</div><div class="id">${m.id}</div></div>`;
-    b.addEventListener('click', () => openModel(MODELS.indexOf(m)));
-    const pick = document.createElement('label');
-    pick.className = 'pick';
-    pick.innerHTML = `<input type="checkbox" ${state.pick.includes(m.id) ? 'checked' : ''}> Compare`;
-    pick.firstChild.addEventListener('change', () => togglePick(m.id));
-    wrap.append(b, pick);
-    grid.appendChild(wrap);
-  }
-  renderPickBar();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const MODELS = [["BODY_FEMALE_001", "Female 1"], ["BODY_FEMALE_002", "Female 2"], ["BODY_FEMALE_003", "Female 3"], ["BODY_FEMALE_004", "Female 4"], ["BODY_FEMALE_005", "Female 5"], ["BODY_FEMALE_006", "Female 6"], ["BODY_FEMALE_007", "Female 7"], ["BODY_FEMALE_008", "Female 8"], ["BODY_MALE_001", "Male 1"], ["BODY_MALE_002", "Male 2"], ["BODY_MALE_003", "Male 3"], ["BODY_MALE_004", "Male 4"], ["BODY_MALE_005", "Male 5"], ["BODY_MALE_006", "Male 6"], ["BODY_MALE_007", "Male 7"], ["BODY_MALE_008", "Male 8"]];
+// One flat index over every section: [group, name, id, link, image, extra text to match]
+const INDEX = [].concat(
+  MODELS.map(([id, name]) => ['Fighter models', name, id, 'models.html#' + id, `img/${id}_face.webp`, '']),
+  GASMASKS.map(m => ['Gas masks', m.name, 'Gas mask ' + m.no, 'models.html#masks', m.icon ? `img/items/${m.icon}.webp` : '', m.female + ' ' + m.male]),
+  DECALS.map(d => ['Skill decals', d.name + (d.premium ? ' (Premium)' : ''), d.id, 'decals.html#' + d.id, `img/decals/${d.icon}.webp`, d.desc]),
+  GEAR.gear.map(g => ['Gear', g.name, g.id, 'gear.html#' + g.id, g.icon ? `img/items/${g.icon}.webp` : '', [g.type, g.weapon, g.category].join(' ')]),
+  GEAR.materials.map(g => ['Materials', g.name, g.id, 'gear.html#' + g.id, g.icon ? `img/items/${g.icon}.webp` : '', g.desc || '']),
+  SHROOMS.mushrooms.map(m => ['Mushrooms', m.name, m.id, 'mushrooms.html#' + m.id, m.icon ? `img/items/${m.icon}.webp` : '', [m.raw.effect && m.raw.effect.name, m.grilled && m.grilled.name].join(' ')]),
+  SHROOMS.beasts.map(b => ['Beasts', b.name, b.id, 'mushrooms.html#' + b.id, b.icon ? `img/items/${b.icon}.webp` : '', b.grilledName || ''])
+).map(e => e.concat([(e[1] + ' ' + e[2]).toLowerCase(), String(e[5]).toLowerCase()]));
+const PER_GROUP = 12;
+function search() {
+  const words = $('q').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  $('sections').hidden = words.length > 0;
+  if (!words.length) { $('results').innerHTML = ''; return; }
+  // names and ids first, then matches found only in descriptions
+  const strong = INDEX.filter(e => words.every(w => e[6].includes(w)));
+  const weak = INDEX.filter(e => !strong.includes(e) && words.every(w => e[6].includes(w) || e[7].includes(w)));
+  const groups = new Map();
+  for (const e of strong.concat(weak)) (groups.get(e[0]) || groups.set(e[0], []).get(e[0])).push(e);
+  $('results').innerHTML = groups.size ? [...groups].map(([g, es]) => `<h2>${g} <span class="id">${es.length}</span></h2>` +
+    es.slice(0, PER_GROUP).map(e => `<a class="hit" href="${e[3]}">${e[4] ? `<img alt="" loading="lazy" src="${e[4]}">` : '<span class="noimg"></span>'}<span>${esc(e[1])}</span><span class="id">${esc(e[2])}</span></a>`).join('') +
+    (es.length > PER_GROUP ? `<div class="more">and ${es.length - PER_GROUP} more: narrow the search, or use the filters on that section's page</div>` : '')).join('')
+    : '<p class="more">Nothing found.</p>';
 }
-
-// Compare: tick two models (a third replaces the oldest tick), then open them side by side.
-function togglePick(id) {
-  state.pick = state.pick.includes(id) ? state.pick.filter(x => x !== id) : state.pick.concat(id).slice(-2);
-  renderGrid();
-}
-function renderPickBar() {
-  const names = state.pick.map(id => MODELS.find(m => m.id === id).label);
-  $('cmp-bar').hidden = !names.length;
-  $('cmp-text').textContent = names.length === 2 ? `${names[0]} and ${names[1]}` : `${names[0] || ''}: tick one more model to compare`;
-  $('cmp-go').disabled = names.length !== 2;
-}
-function renderCompare() {
-  const ms = state.pick.map(id => MODELS.find(m => m.id === id));
-  $('c-name').textContent = ms.map(m => m.label).join(' vs ');
-  $('c-cols').innerHTML = ms.map(m => `<section><h3>${m.label} <span class="id">${m.id}</span></h3><div class="cviews">` +
-    Object.keys(VIEWS).map(v => `<figure><img alt="${m.label} ${VIEWS[v].toLowerCase()} view" src="${img(m, v)}"><figcaption>${VIEWS[v]}</figcaption></figure>`).join('') +
-    `</div></section>`).join('');
-}
-function openModel(i) {
-  state.open = i;
-  const m = MODELS[i];
-  $('d-name').textContent = m.label;
-  $('d-id').textContent = m.id;
-  $('d-views').innerHTML = Object.keys(VIEWS).map(v =>
-    `<figure><img alt="${m.label} ${VIEWS[v].toLowerCase()} view" src="${img(m, v)}"><figcaption>${VIEWS[v]}</figcaption></figure>`).join('');
-  $('d-info').innerHTML = [
-    ['Editor label', m.label], ['Save id', m.id], ['Body mesh', m.body], ['Hair mesh', m.hair || 'none (hair is part of the body)'],
-    ['Voice', `Set ${m.voice}, used by this model only (voice group ${m.voiceb})`],
-    ['Taunts', [0, 1, 2].map(k => m.provoke + k).map(n => `<button class="taunt" data-taunt="${n}" title="Play this taunt's sounds">&#9654; Provoke_${String(n).padStart(2, '0')} (${TAUNTS.taunts[n].s.toFixed(1)} s)</button>`).join(' ') + ` shared with ${m.gender === 'female' ? 'Male' : 'Female'} ${Number(m.id.slice(-3))}`],
-  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  $('d-views').hidden = state.mode === '3d';
-  $('d-3d').hidden = state.mode !== '3d';
-  if (state.mode === '3d') { if (state.shown3d === m.id) v3Mask(); else { state.shown3d = m.id; show3d(); } }
-  $('d-clips').innerHTML = Object.keys(CLIPS).map(k => `<button data-clip="${k}">&#9654; ${CLIPS[k]}</button>`).join('');
-  stopClip();
-  if (!$('dlg').open) $('dlg').showModal();
-  history.replaceState(null, '', '#' + m.id);
-}
-// ---- 3D view: three.js is fetched the first time it is opened; meshes and textures per model on demand ----
-const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-const PRESETS = { face: { ty: 163, dist: 105 }, body: { ty: 90, dist: 400 } };
-let threeReady = null, v3 = null, v3Token = 0;
-function loadThree() {
-  return threeReady || (threeReady = new Promise((ok, fail) => {
-    const s = document.createElement('script');
-    s.src = THREE_URL; s.onload = ok; s.onerror = () => fail(new Error('three.js did not load'));
-    document.head.appendChild(s);
-  }));
-}
-function tex3d(name, srgb) {
-  const t = new THREE.TextureLoader().load(`model3d/${name}.webp`, () => { if (v3) v3.dirty = true; });
-  t.flipY = false; t.encoding = srgb ? THREE.sRGBEncoding : THREE.LinearEncoding; t.anisotropy = 8;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return t;
-}
-// mesh3d(): one mesh from model3d/<name>.bin (layout in tools/pack3d.py). Gas-mask triangles get their own material.
-async function mesh3d(info, hair) {
-  const res = await fetch(`model3d/${info.name}.bin`);
-  if (!res.ok) throw new Error(`mesh file missing: ${res.status}`);
-  const buf = await res.arrayBuffer(), n = info.verts;
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf, 0, n * 3), 3));
-  g.setAttribute('normal', new THREE.InterleavedBufferAttribute(new THREE.InterleavedBuffer(new Int8Array(buf, n * 12, n * 4), 4), 3, 0, true));
-  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(buf, n * 16, n * 2), 2));
-  g.setIndex(new THREE.BufferAttribute(new Uint16Array(buf, n * 24, info.indices), 1));
-  const base = { map: tex3d(info.name + '_D', true), normalMap: tex3d(info.name + '_N', false), normalScale: new THREE.Vector2(1, -1), metalness: 0 };
-  const mats = info.groups.map(grp => {
-    g.addGroup(grp.start, grp.count, info.groups.indexOf(grp));
-    const m = new THREE.MeshStandardMaterial(Object.assign({ roughness: hair ? 0.55 : 0.62 }, base));
-    if (hair) {
-      m.alphaMap = tex3d(info.name + '_A', false); m.alphaTest = 0.5; m.side = THREE.DoubleSide;
-      // strands that pass the alpha test must be written fully opaque, or the page shows through the canvas there
-      m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>' + String.fromCharCode(10) + 'gl_FragColor.a = 1.0;'); };
-    }
-    m.userData.part = grp.part || '';
-    return m;
-  });
-  return new THREE.Mesh(g, mats);
-}
-function v3Init() {
-  const canvas = $('d-canvas');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x555560, 0.75));
-  const key = new THREE.DirectionalLight(0xffffff, 0.9), rim = new THREE.DirectionalLight(0xbfd0ff, 0.5);
-  const camera = new THREE.PerspectiveCamera(30, 1, 1, 3000);
-  camera.add(key); camera.add(rim); key.position.set(120, 170, 300); rim.position.set(-200, 110, -250);
-  scene.add(camera);
-  v3 = { renderer, scene, camera, root: null, yaw: 0, pitch: 0, dirty: true, ...PRESETS.body };
-  // drag: rotate (shift or right button: move up/down); wheel or pinch: zoom
-  const ptrs = new Map(); let pinch = 0;
-  canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, e); pinch = 0; });
-  const up = e => { ptrs.delete(e.pointerId); pinch = 0; };
-  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
-  canvas.addEventListener('pointermove', e => {
-    const prev = ptrs.get(e.pointerId);
-    if (!prev) return;
-    ptrs.set(e.pointerId, e);
-    if (ptrs.size === 2) {
-      const [a, b] = [...ptrs.values()], d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      if (pinch) v3Zoom(pinch / d);
-      pinch = d;
-    } else if (e.shiftKey || (e.buttons & 2)) {
-      v3.ty = Math.max(0, Math.min(185, v3.ty + (e.clientY - prev.clientY) * v3.dist / 900));
-    } else {
-      v3.yaw -= (e.clientX - prev.clientX) * 0.008;
-      v3.pitch = Math.max(-1.2, Math.min(1.2, v3.pitch + (e.clientY - prev.clientY) * 0.006));
-    }
-    v3.dirty = true;
-  });
-  canvas.addEventListener('wheel', e => { e.preventDefault(); v3Zoom(Math.exp(e.deltaY * 0.001)); }, { passive: false });
-  canvas.addEventListener('contextmenu', e => e.preventDefault());
-  new ResizeObserver(() => { v3.dirty = true; }).observe(canvas.parentElement);
-  (function frame() {
-    requestAnimationFrame(frame);
-    if (!v3.dirty || !$('dlg').open || state.mode !== '3d') return;
-    v3.dirty = false;
-    const w = canvas.parentElement.clientWidth, h = canvas.parentElement.clientHeight;
-    if (!w || !h) return;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h; camera.updateProjectionMatrix();
-    const cp = Math.cos(v3.pitch);
-    camera.position.set(Math.sin(v3.yaw) * cp * v3.dist, v3.ty + Math.sin(v3.pitch) * v3.dist, Math.cos(v3.yaw) * cp * v3.dist);
-    camera.lookAt(0, v3.ty, 0);
-    renderer.render(scene, camera);
-  })();
-}
-function v3Zoom(f) { v3.dist = Math.max(40, Math.min(700, v3.dist * f)); v3.dirty = true; }
-function v3Preset(name) { if (v3) { Object.assign(v3, PRESETS[name], { yaw: 0, pitch: 0, dirty: true }); } }
-function v3Mask() {
-  if (!v3 || !v3.root) return;
-  v3.root.traverse(o => { for (const m of [].concat(o.material || [])) if (m.userData.part === 'mask') m.visible = state.mask === 'on'; });
-  v3.dirty = true;
-}
-function v3Clear() {
-  if (!v3 || !v3.root) return;
-  v3.root.traverse(o => {
-    if (o.geometry) o.geometry.dispose();
-    for (const m of [].concat(o.material || [])) { for (const k of ['map', 'normalMap', 'alphaMap']) if (m[k]) m[k].dispose(); m.dispose(); }
-  });
-  v3.scene.remove(v3.root); v3.root = null;
-}
-// show3d(): load the open model into the 3D view. A newer call wins if the user moves on while one is loading.
-async function show3d() {
-  const token = ++v3Token, m = MODELS[state.open], info = MODELS3D[m.id], note = $('d-3d-note');
-  note.textContent = 'Loading 3D model…';
-  try {
-    await loadThree();
-    if (!v3) v3Init();
-    const root = new THREE.Group();
-    root.add(await mesh3d(info.body, false));
-    if (info.hair) root.add(await mesh3d(info.hair, true));
-    if (token !== v3Token) return;
-    v3Clear();
-    v3.root = root; v3.scene.add(root);
-    v3Mask();
-    note.textContent = 'Drag to rotate · scroll or pinch to zoom · shift-drag to move up and down';
-  } catch (err) {
-    if (token === v3Token) note.textContent = 'The 3D view could not be loaded (' + err.message + ').';
-  }
-}
-
-function stopClip() {
-  if (playing) { playing.pause(); playing = null; }
-  for (const t of tauntTimers) clearTimeout(t);
-  for (const a of tauntSounds) a.pause();
-  tauntTimers = []; tauntSounds = [];
-}
-// playTaunt(): play a taunt's sounds at the times its animation triggers them, in the open model's voice.
-// Each voice cue has a couple of recorded variants; one is picked at random, as the game does.
-function playTaunt(n) {
-  stopClip();
-  const m = MODELS[state.open], pick = k => 1 + Math.floor(Math.random() * k);
-  for (const [t, what] of TAUNTS.taunts[n].ev) {
-    const sfx = what.startsWith('sfx:') ? what.slice(4) : null;
-    const a = new Audio(sfx ? `voice/taunt/sfx_${sfx}_${pick(TAUNTS.sfx[sfx])}.ogg` : `voice/taunt/${m.voice}_${state.lang}_${what}_${pick(TAUNTS.clips[m.voice][what])}.ogg`);
-    a.preload = 'auto';
-    tauntSounds.push(a);
-    tauntTimers.push(setTimeout(() => a.play().catch(() => { $('d-clip-note').textContent = 'This browser could not play the clip (Ogg Vorbis audio).'; }), t * 1000));
-  }
-}
-function playClip(key) {
-  stopClip();
-  playing = new Audio(`voice/${MODELS[state.open].id}_${state.lang}_${key}.ogg`);
-  playing.play().catch(() => { $('d-clip-note').textContent = 'This browser could not play the clip (Ogg Vorbis audio).'; });
-}
-function step(d) {
-  const list = shown().map(m => MODELS.indexOf(m));
-  const at = list.indexOf(state.open);
-  openModel(list[(at + d + list.length) % list.length]);
-}
-
-function bindSeg(id, key) {
-  $(id).addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    state[key] = b.dataset.v;
-    for (const x of document.querySelectorAll(`[data-seg="${key}"] button, #${id} button`)) x.setAttribute('aria-pressed', String(x.dataset.v === b.dataset.v));
-    renderGrid();
-    if ($('dlg').open) openModel(state.open);
-    if ($('cmp').open) renderCompare();
-  });
-}
-bindSeg('filter', 'filter');
-bindSeg('view', 'view');
-bindSeg('mask', 'mask');
-bindSeg('d-mask', 'mask');
-bindSeg('d-lang', 'lang');
-bindSeg('d-mode', 'mode');
-bindSeg('c-mask', 'mask');
-$('cmp-go').addEventListener('click', () => { renderCompare(); $('cmp').showModal(); });
-$('cmp-clear').addEventListener('click', () => { state.pick = []; renderGrid(); });
-$('c-close').addEventListener('click', () => $('cmp').close());
-$('cmp').addEventListener('click', e => { if (e.target === $('cmp')) $('cmp').close(); });
-$('d-preset').addEventListener('click', e => { const b = e.target.closest('button'); if (b) v3Preset(b.dataset.v); });
-$('d-info').addEventListener('click', e => { const b = e.target.closest('[data-taunt]'); if (b) playTaunt(+b.dataset.taunt); });
-$('d-clips').addEventListener('click', e => { const b = e.target.closest('[data-clip]'); if (b) playClip(b.dataset.clip); });
-$('d-close').addEventListener('click', () => closeDlg());
-$('d-prev').addEventListener('click', () => step(-1));
-$('d-next').addEventListener('click', () => step(1));
-$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });
-$('dlg').addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft') step(-1);
-  if (e.key === 'ArrowRight') step(1);
-});
-const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
-const closeDlg = () => { stopClip(); $('dlg').close(); clearHash(); };
-$('dlg').addEventListener('close', () => { stopClip(); clearHash(); });
-// #BODY_FEMALE_003 in the address opens that model (the save editor links here this way)
-function openFromHash() {
-  const i = MODELS.findIndex(m => m.id === decodeURIComponent(location.hash.slice(1)));
-  if (i >= 0) openModel(i);
-}
-window.addEventListener('hashchange', openFromHash);
-renderGrid();
-openFromHash();
+$('q').addEventListener('input', search);
+search();
 </script>
 </body>
 </html>

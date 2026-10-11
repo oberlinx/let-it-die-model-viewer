@@ -7,10 +7,10 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="website">
 <meta property="og:title" content="LET IT DIE Gear">
-<meta property="og:description" content="Every weapon, armour piece and crafting material in LET IT DIE, with its icon and stats.">
+<meta property="og:description" content="Every weapon, armour piece and crafting material in LET IT DIE, with its icon, stats and crafting costs.">
 <meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="description" content="Every weapon, armour piece and crafting material in LET IT DIE, with its icon and stats.">
+<meta name="description" content="Every weapon, armour piece and crafting material in LET IT DIE, with its icon, stats and crafting costs.">
 <style>
   :root {
     --bg: #0a0a0a; --bg-raised: #131313; --panel: #161616;
@@ -22,6 +22,7 @@
     --display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
   nav.pages { display: flex; gap: 6px; margin-bottom: 18px; }
@@ -95,20 +96,28 @@
   .pair figure { margin: 0; flex: 1; background: var(--stage); border: 1px solid var(--panel-border); text-align: center; }
   .pair img { width: 100%; display: block; }
   .pair figcaption { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; padding: 2px 0 4px; }
+  .tiers { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; }
+  .tiers button { background: var(--bg-raised); color: var(--text-dim); border: 1px solid var(--panel-border); font: inherit; font-size: 11.5px; padding: 3px 8px; cursor: pointer; }
+  .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
+  .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .usedby { max-height: 150px; overflow: auto; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <nav class="pages"><a href="./">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html" aria-current="page">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
+  <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html" aria-current="page">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
   <header>
     <h1>LET IT DIE <span>Gear</span></h1>
-    <p>Every weapon, armour piece and crafting material in the game data, with its icon and stats. Each upgrade tier of a piece is listed separately.</p>
+    <p>Every weapon, armour piece and crafting material in the game data, with its icon, stats and what it costs to develop and upgrade. Pieces that upgrade into one another are grouped into one line.</p>
   </header>
 
   <div class="bar">
     <input type="search" id="q" placeholder="Search name or id" aria-label="Search gear">
     <div class="seg"><span class="lbl">Kind</span><div class="btns" id="kind">
       <button data-v="" aria-pressed="true">All</button><button data-v="Weapon" aria-pressed="false">Weapons</button><button data-v="Head" aria-pressed="false">Head</button><button data-v="Body" aria-pressed="false">Body</button><button data-v="Legs" aria-pressed="false">Legs</button><button data-v="Material" aria-pressed="false">Materials</button>
+    </div></div>
+    <div class="seg"><span class="lbl">Show</span><div class="btns" id="group">
+      <button data-v="lines" aria-pressed="true">Upgrade lines</button><button data-v="all" aria-pressed="false">Every tier</button>
     </div></div>
     <label class="seg"><span class="lbl">Category</span><select id="cat"><option value="">All</option></select></label>
     <label class="seg"><span class="lbl">Weapon type</span><select id="wtype"><option value="">All</option></select></label>
@@ -120,7 +129,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_part</code> and <code>master_item</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; five pieces (such as Fists) have none. The two attack or defence numbers are the pair the game stores for each piece. Blueprints are left out because each one maps to a piece already listed.</p>
+    <p>Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; five pieces (such as Fists) have none. The two attack or defence numbers are the pair the game stores for each piece. Development and upgrade costs are the stored base amounts; an upgrade material shown without a number is only needed at higher levels. Blueprints are left out because each one maps to a piece already listed.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -132,7 +141,7 @@
   </div>
   <div class="dlg-body">
     <div><div class="big"><img id="d-img" alt=""></div><div id="d-extra"></div></div>
-    <div><p class="desc" id="d-desc"></p><dl id="d-info"></dl></div>
+    <div><div class="tiers" id="d-tiers"></div><p class="desc" id="d-desc"></p><dl id="d-info"></dl></div>
   </div>
 </dialog>
 
@@ -154,27 +163,66 @@ function bindSeg(id, key) {
     renderGrid();
   });
 }
-const ALL = GEAR.gear.map((g, i) => Object.assign({ order: i }, g)).concat(GEAR.materials.map((m, i) => Object.assign({ order: 100000 + i }, m, { type: m.type === 'Consumable' ? 'Material' : m.type, sub: m.type })));
+const PIECES = GEAR.gear.map((g, i) => Object.assign({ order: i }, g));
+const MATS = GEAR.materials.map((m, i) => Object.assign({ order: 100000 + i }, m, { type: 'Material', sub: m.type }));
+const ALL = PIECES.concat(MATS);
 const BY_ID = Object.fromEntries(ALL.map(d => [d.id, d]));
-const state = { q: '', kind: '', cat: '', wtype: '', rarity: '', sort: 'game', open: null };
+// Upgrade lines: follow each piece's "upgrades to" link from the pieces nothing upgrades into.
+const LINE_OF = {};
+const hasPrev = new Set(PIECES.filter(p => p.next && BY_ID[p.next]).map(p => p.next));
+function walk(start) {
+  const tiers = [];
+  for (let cur = start; cur && !LINE_OF[cur.id]; cur = cur.next && BY_ID[cur.next]) { tiers.push(cur); LINE_OF[cur.id] = tiers; }
+  return tiers;
+}
+for (const p of PIECES) if (!hasPrev.has(p.id)) walk(p);
+for (const d of ALL) if (!LINE_OF[d.id]) walk(d);
+// Armour sets: the head, body and legs pieces that share a series and number.
+const SETS = {};
+const setKey = id => { const m = /^PT_([A-Z]+)_(HEAD|TOPS|BTM)_(.+)$/.exec(id); return m && [m[1] + '_' + m[3], m[2]]; };
+for (const p of PIECES) { const k = setKey(p.id); if (k) (SETS[k[0]] = SETS[k[0]] || {})[k[1]] = p; }
+// What each material is used for.
+const USED = {};
+for (const p of PIECES) for (const how of ['craft', 'upgrade']) for (const [mid] of (p[how] ? p[how].mats : [])) {
+  const u = USED[mid] = USED[mid] || new Map(); u.set(p.id, u.has(p.id) ? 'both' : how);
+}
+const state = { q: '', kind: '', group: 'lines', cat: '', wtype: '', rarity: '', sort: 'game', open: null };
 let list = [];
+const upper = (d, k) => d[k] ? d[k][1] : -1;
 function filtered() {
   const q = state.q.trim().toLowerCase();
-  const out = ALL.filter(d => (!state.kind || d.type === state.kind) && (!state.cat || d.category === state.cat) && (!state.wtype || d.weapon === state.wtype) &&
+  const hit = ALL.filter(d => (!state.kind || d.type === state.kind) && (!state.cat || d.category === state.cat) && (!state.wtype || d.weapon === state.wtype) &&
     (!state.rarity || d.rarity === +state.rarity) && (!q || (d.name + ' ' + d.id).toLowerCase().includes(q)));
-  const top = (d, k) => d[k] ? d[k][1] : -1;
+  let out = hit;
+  if (state.group === 'lines') {            // one entry per line: its first matching tier, carrying the line's best stats for sorting
+    const seen = new Map();
+    for (const d of hit) {
+      const line = LINE_OF[d.id];
+      if (!seen.has(line)) seen.set(line, Object.assign({}, d, { tiers: line.length, bestAtk: -1, bestDef: -1 }));
+      const e = seen.get(line); e.bestAtk = Math.max(e.bestAtk, upper(d, 'atk')); e.bestDef = Math.max(e.bestDef, upper(d, 'def'));
+    }
+    out = [...seen.values()];
+  }
+  const atk = d => d.bestAtk != null ? d.bestAtk : upper(d, 'atk'), def = d => d.bestDef != null ? d.bestDef : upper(d, 'def');
   const by = { game: (a, b) => a.order - b.order, name: (a, b) => a.name.localeCompare(b.name) || a.order - b.order, rarity: (a, b) => b.rarity - a.rarity || a.order - b.order,
-    atk: (a, b) => top(b, 'atk') - top(a, 'atk') || a.order - b.order, def: (a, b) => top(b, 'def') - top(a, 'def') || a.order - b.order };
+    atk: (a, b) => atk(b) - atk(a) || a.order - b.order, def: (a, b) => def(b) - def(a) || a.order - b.order };
   return out.sort(by[state.sort]);
 }
-const stat = d => d.atk ? `ATK ${num(d.atk[1])}` : d.def ? `DEF ${num(d.def[1])}` : (d.sub || d.type);
+const stat = d => d.atk ? `ATK ${num(d.bestAtk > 0 ? d.bestAtk : d.atk[1])}` : d.def ? `DEF ${num(d.bestDef > 0 ? d.bestDef : d.def[1])}` : (d.sub || d.type);
 function renderGrid() {
   list = filtered();
-  $('count').textContent = `${list.length} of ${ALL.length} entries`;
+  const pieces = state.group === 'lines' ? list.reduce((n, d) => n + d.tiers, 0) : list.length;
+  $('count').textContent = state.group === 'lines' ? `${list.length} lines (${pieces} of ${ALL.length} entries)` : `${list.length} of ${ALL.length} entries`;
   $('grid').innerHTML = list.length ? list.map(d => `<button class="card" data-id="${d.id}"><div class="shot tall">${d.icon ? `<img loading="lazy" alt="" src="${pic(d.icon)}">` : ''}</div>
-    <div class="meta"><div class="name">${esc(d.name)}</div><div class="sub">${stat(d)}</div><div>${stars(d.rarity, 7)}</div></div></button>`).join('')
+    <div class="meta"><div class="name">${esc(d.name)}</div><div class="sub">${stat(d)}${d.tiers > 1 ? ` · ${d.tiers} tiers` : ''}</div><div>${stars(d.rarity, 7)}</div></div></button>`).join('')
     : '<div class="empty">Nothing matches these filters.</div>';
 }
+function matLink([id, n]) {
+  const name = (BY_ID[id] && BY_ID[id].name) || GEAR.names[id] || id;
+  const href = BY_ID[id] ? '#' + id : id.startsWith('MSR_') ? 'mushrooms.html#' + id : '';
+  return (n ? n + ' × ' : '') + (href ? `<a href="${href}">${esc(name)}</a>` : esc(name));
+}
+const cost = c => [c.spl ? num(c.spl) + ' SPLithium' : ''].concat(c.mats.map(matLink)).filter(Boolean).join(', ');
 function openItem(id) {
   const d = BY_ID[id];
   if (!d) return;
@@ -184,8 +232,11 @@ function openItem(id) {
   $('d-img').src = d.icon ? pic(d.icon) : '';
   $('d-img').parentElement.hidden = !d.icon;
   $('d-desc').textContent = d.desc || '';
+  $('d-desc').hidden = !d.desc;
   $('d-extra').innerHTML = '';
-  const rows = [['Id', esc(d.id)], ['Kind', esc([d.type, d.weapon].filter(Boolean).join(' · '))]];
+  const line = LINE_OF[id];
+  $('d-tiers').innerHTML = line.length > 1 ? line.map(t => `<button data-tier="${t.id}" aria-pressed="${t.id === id}">${esc(t.name)}</button>`).join('') : '';
+  const rows = [['Id', esc(d.id)], ['Kind', esc([d.sub || d.type, d.weapon].filter(Boolean).join(' · '))]];
   if (d.category) rows.push(['Category', esc(d.category)]);
   if (d.atk) rows.push(['Attack', `${num(d.atk[0])} – ${num(d.atk[1])}`]);
   if (d.def) rows.push(['Defence', `${num(d.def[0])} – ${num(d.def[1])}`]);
@@ -193,20 +244,31 @@ function openItem(id) {
   if (d.ammo) rows.push(['Ammo capacity', num(d.ammo)]);
   if (d.req) rows.push(['Requires', `${esc(d.req[0])} ${num(d.req[1])}`]);
   if (d.rage) rows.push(['Rage move', esc(d.rage)]);
+  if (d.craft) rows.push(['Develop', cost(d.craft)]);
+  if (d.upgrade) rows.push(['Each upgrade', cost(d.upgrade)]);
   if (d.buy) rows.push(['Shop price', num(d.buy) + ' Kill Coins']);
   if (d.sell) rows.push(['Sells for', num(d.sell) + ' Kill Coins']);
-  if (d.next && BY_ID[d.next]) rows.push(['Upgrades to', `<a href="#${d.next}">${esc(BY_ID[d.next].name)}</a>`]);
-  const from = ALL.find(x => x.next === d.id);
-  if (from) rows.push(['Upgraded from', `<a href="#${from.id}">${esc(from.name)}</a>`]);
-  $('d-info').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const k = setKey(id), set = k && SETS[k[0]];
+  if (set && Object.keys(set).length > 1) rows.push(['Set', ['HEAD', 'TOPS', 'BTM'].filter(s => set[s]).map(s => set[s].id === id ? esc(set[s].name) : `<a href="#${set[s].id}">${esc(set[s].name)}</a>`).join(' · ')]);
+  const used = USED[id];
+  if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="#${pid}">${esc(BY_ID[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
+  $('d-info').innerHTML = rows.map(([k2, v]) => `<dt>${k2}</dt><dd>${v}</dd>`).join('');
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + d.id);
 }
+// arrows step through the grid; inside a line they land on that line's shown tier
+function step(n) {
+  const line = LINE_OF[state.open];
+  const at = list.findIndex(d => d.id === state.open || (state.group === 'lines' && LINE_OF[d.id] === line));
+  if (list.length) openItem(list[(Math.max(at, 0) + n + list.length) % list.length].id);
+}
+$('d-tiers').addEventListener('click', e => { const b = e.target.closest('[data-tier]'); if (b) openItem(b.dataset.tier); });
 const opts = (id, vals) => { for (const v of vals) $(id).add(new Option(v, v)); };
 opts('cat', [...new Set(ALL.map(d => d.category).filter(Boolean))].sort());
 opts('wtype', [...new Set(ALL.map(d => d.weapon).filter(Boolean))].sort());
 opts('rarity', [...new Set(ALL.map(d => d.rarity).filter(r => r > 0))].sort((a, b) => a - b));
 bindSeg('kind', 'kind');
+bindSeg('group', 'group');
 $('q').addEventListener('input', e => { state.q = e.target.value; renderGrid(); });
 for (const [id, key] of [['cat', 'cat'], ['wtype', 'wtype'], ['rarity', 'rarity'], ['sort', 'sort']]) $(id).addEventListener('change', e => { state[key] = e.target.value; renderGrid(); });
 $('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openItem(c.dataset.id); });
@@ -216,10 +278,6 @@ $('d-next').addEventListener('click', () => step(1));
 $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });
 $('dlg').addEventListener('close', clearHash);
 $('dlg').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
-function step(n) {
-  const at = list.findIndex(d => d.id === state.open);
-  if (list.length) openItem(list[(Math.max(at, 0) + n + list.length) % list.length].id);
-}
 window.addEventListener('hashchange', () => openItem(decodeURIComponent(location.hash.slice(1))));
 renderGrid();
 openItem(decodeURIComponent(location.hash.slice(1)));
