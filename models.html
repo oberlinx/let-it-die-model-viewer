@@ -143,7 +143,7 @@
       <button data-v="face" aria-pressed="true">Face</button><button data-v="side" aria-pressed="false">Angle</button><button data-v="body" aria-pressed="false">Body</button><button data-v="back" aria-pressed="false">Back</button>
     </div></div>
     <div class="seg"><span class="lbl">Look</span><div class="btns" id="look" data-seg="look">
-      <button data-v="fighter" aria-pressed="true">Fighter</button><button data-v="decoy" aria-pressed="false">Decoy</button>
+      <button data-v="fighter" aria-pressed="true">Fighter</button><button data-v="screamer" aria-pressed="false">Screamer</button><button data-v="decoy" aria-pressed="false">Decoy</button>
     </div></div>
     <div class="seg"><span class="lbl">Gas mask</span><div class="btns" id="mask" data-seg="mask">
       <button data-v="on" aria-pressed="true">On</button><button data-v="off" aria-pressed="false">Off</button>
@@ -159,7 +159,7 @@
   </section>
 
   <footer>
-    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in the game's idle stance (frame one of its neutral idle animation) with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The 3D view uses the same meshes with textures reduced to 1024 px, and can also show the seated pose from the game's fighter-select screen or the plain reference pose. Decoy is the statue the game leaves behind when a Decoyshroom is used: its own mesh for each body, with that body's infected skin, its hair and the mushrooms growing on it. The game has 24 taunt animations and each model stores the id of one of them; ids step by three, so the two after it are listed as that model's as well, which is an inference rather than something the data states. Taunts reuse the ordinary voice clips; there are no separate taunt lines. A taunt button plays that taunt's voice clips and sound effects at the moments its animation triggers them.</p>
+    <p>Labels such as "Female 3" match the model picker in the <a href="https://oberlinx.github.io/let-it-die-save-editor/">LET IT DIE save editor</a>; the id underneath is the <code>master_body</code> key stored in the save. Renders show the base body in the game's idle stance (frame one of its neutral idle animation) with default underwear and hair (the gas mask is part of the body mesh and can be hidden with the toggle), lit outside the game engine, so colours are close to but not identical to in-game lighting. Each model has its own voice set of about 360 clips in English and Japanese; five samples of each are included here. The 3D view uses the same meshes with textures reduced to 1024 px, and can also show the seated pose from the game's fighter-select screen or the plain reference pose. Screamer shows the same body with the infected skin the tower's regular enemies have (in the game they also wear gear). Decoy is the statue the game leaves behind when a Decoyshroom is used: its own mesh for each body, with that body's infected skin, its hair and the mushrooms growing on it. The game has 24 taunt animations and each model stores the id of one of them; ids step by three, so the two after it are listed as that model's as well, which is an inference rather than something the data states. Taunts reuse the ordinary voice clips; there are no separate taunt lines. A taunt button plays that taunt's voice clips and sound effects at the moments its animation triggers them.</p>
     <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -179,7 +179,7 @@
   <div class="dlg-head">
     <h2 id="d-name"></h2><span class="id" id="d-id"></span>
     <div class="seg fighterOnly"><span class="lbl">Gas mask</span><div class="btns" id="d-mask" data-seg="mask"><button data-v="on" aria-pressed="true">On</button><button data-v="off" aria-pressed="false">Off</button></div></div>
-    <div class="seg"><div class="btns" id="d-look" data-seg="look"><button data-v="fighter" aria-pressed="true">Fighter</button><button data-v="decoy" aria-pressed="false">Decoy</button></div></div>
+    <div class="seg"><div class="btns" id="d-look" data-seg="look"><button data-v="fighter" aria-pressed="true">Fighter</button><button data-v="screamer" aria-pressed="false">Screamer</button><button data-v="decoy" aria-pressed="false">Decoy</button></div></div>
     <div class="seg"><div class="btns" id="d-mode" data-seg="mode"><button data-v="photos" aria-pressed="true">Photos</button><button data-v="3d" aria-pressed="false">3D</button></div></div>
     <div class="nav"><button id="d-prev" aria-label="Previous model">&larr;</button><button id="d-next" aria-label="Next model">&rarr;</button><button id="d-close">Close</button></div>
   </div>
@@ -231,7 +231,9 @@ const state = { filter: 'all', view: 'face', mask: 'on', lang: 'en', mode: 'phot
 let playing = null, tauntTimers = [], tauntSounds = [];
 const $ = id => document.getElementById(id);
 // Decoy: the mushroom-covered statue a Decoyshroom leaves behind (it has no unmasked version).
-const img = (m, v) => state.look === 'decoy' ? `img/${m.id}_decoy_${v}.webp` : `img/${m.id}_${v}${state.mask === 'off' && v !== 'back' ? '_nomask' : ''}.webp`;
+// Screamer: the same body with the infected skin the tower's regular enemies have.
+const img = (m, v) => state.look === 'decoy' ? `img/${m.id}_decoy_${v}.webp`
+  : `img/${m.id}_${v}${state.look === 'screamer' ? '_screamer' : ''}${state.mask === 'off' && v !== 'back' ? '_nomask' : ''}.webp`;
 const shown = () => MODELS.filter(m => state.filter === 'all' || m.gender === state.filter);
 
 function renderGrid() {
@@ -319,7 +321,7 @@ function tex3d(name, srgb) {
   return t;
 }
 // mesh3d(): one mesh from model3d/<name>.bin (layout in tools/pack3d.py). Gas-mask triangles get their own material.
-async function mesh3d(info, hair, pose) {
+async function mesh3d(info, hair, pose, skin) {
   const res = await fetch(`model3d/${info.name}.bin`);
   if (!res.ok) throw new Error(`mesh file missing: ${res.status}`);
   const buf = await res.arrayBuffer(), n = info.verts;
@@ -337,7 +339,7 @@ async function mesh3d(info, hair, pose) {
   g.setIndex(new THREE.BufferAttribute(new Uint16Array(buf, n * 24, info.indices), 1));
   const mats = info.groups.map(grp => {
     g.addGroup(grp.start, grp.count, info.groups.indexOf(grp));
-    const m = mat3d(info.name, hair);
+    const m = mat3d(skin || info.name, hair);
     m.userData.part = grp.part || '';
     return m;
   });
@@ -445,7 +447,8 @@ async function show3d() {
     const root = new THREE.Group();
     if (decoy) root.add(await decoy3d(info.decoy));
     else {
-      root.add(await mesh3d(info.body, false, pose));
+      // a Screamer is the same mesh with the infected skin, which is the texture set baked for that body's decoy
+      root.add(await mesh3d(info.body, false, pose, state.look === 'screamer' ? info.decoy.name : null));
       if (info.hair) root.add(await mesh3d(info.hair, true, pose));
     }
     if (token !== v3Token) return;

@@ -80,8 +80,15 @@ async function buildMesh(info, opts) {
   return new THREE.Mesh(g, mats);
 }
 
+// Screamers (the tower's regular enemies) are the same bodies with the "Enemy" skin textures: same names as the
+// fighter's, with Main swapped for Enemy, and the underwear already painted in.
+let SCREAMER = false;
 let makeMaterial = async function (m, opts) {
   const hair = opts.kind === 'hair';
+  if (SCREAMER && opts.kind === 'body') {
+    const swap = t => ({ file: t.file.replace('TX_CH_Main_', 'TX_CH_Enemy_') });
+    m = Object.assign({}, m, { tex: { DiffuseMap: swap(m.tex.DiffuseMap), NormalMap: swap(m.tex.NormalMap) } });
+  }
   const mat = new THREE.MeshStandardMaterial({ roughness: hair ? 0.55 : 0.62, metalness: 0 });
   mat.map = await loadTex(m.tex.DiffuseMap, true);
   if (!Q.has('nonormal') && !(hair && Q.has('nohairnormal'))) { mat.normalMap = await loadTex(m.tex.NormalMap, false); mat.normalScale = new THREE.Vector2(1, -1); }
@@ -338,6 +345,23 @@ async function renderThumbs() {
     const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.82));
     await fetch('/save/thumb_' + m.id + '.webp', { method: 'POST', body: blob });
   }
+  await fetch('/save/done.png', { method: 'POST', body: 'x' });
+}
+async function renderScreamers() {
+  SCREAMER = true;
+  for (const k in VIEWS) { VIEWS[k].w *= 2; VIEWS[k].h *= 2; }
+  for (const m of models) {
+    for (const k in texCache) delete texCache[k];
+    for (const nm of [false, true]) {
+      const sfx = '_screamer' + (nm ? '_nomask' : '');
+      await show(m.id, 'face', 0, nm); await saveScaled(m.id + '_face' + sfx + '.webp', 2);
+      await show(m.id, 'face', 35, nm); await saveScaled(m.id + '_side' + sfx + '.webp', 2);
+      await show(m.id, 'body', 0, nm); await saveScaled(m.id + '_body' + sfx + '.webp', 2);
+    }
+    await show(m.id, 'body', 180); await saveScaled(m.id + '_back_screamer.webp', 2);
+  }
+  for (const k in VIEWS) { VIEWS[k].w /= 2; VIEWS[k].h /= 2; }
+  SCREAMER = false;
   await fetch('/save/done.png', { method: 'POST', body: 'x' });
 }
 async function renderAll() {
