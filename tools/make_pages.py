@@ -158,7 +158,7 @@ page('gear.html', 'Gear',
     <label class="seg"><span class="lbl">Weapon type</span><select id="wtype"><option value="">All</option></select></label>
     <label class="seg"><span class="lbl">Rarity</span><select id="rarity"><option value="">Any</option></select></label>
     <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="atk">Attack</option><option value="def">Defence</option></select></label>""",
-     "Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal \"D\" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. The per-level attack values match the game for the piece checked (Jungle Machete, 32 at +4). Upgrade costs per level are worked out from the stored base amounts and growth factors using the same rounding rule the game is known to use for durability; they have not been checked against the game level by level. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. Blueprints are left out because each one maps to a piece already listed.",
+     "Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal \"D\" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. The per-level attack values match the game for the pieces checked (Jungle Machete, 32 at +4; Buzzsaw Masher +, 2,499 at +12 and 2,574 at +13). Upgrade costs per level are worked out from the stored base amounts and growth factors, and match the game for the step checked (Buzzsaw Masher + from +12 to +13: 54,588 SPLithium and the same five materials). The stat requirement shown is before any decal that lowers requirements. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. Blueprints are left out because each one maps to a piece already listed.",
      DIALOG % '', 'gear.js', r"""const PIECES = GEAR.gear.map((g, i) => Object.assign({ order: i }, g));
 const MATS = GEAR.materials.map((m, i) => Object.assign({ order: 100000 + i }, m, { type: 'Material', sub: m.type }));
 const ALL = PIECES.concat(MATS);
@@ -221,10 +221,11 @@ function matLink([id, n]) {
 const cost = c => [c.spl ? num(c.spl) + ' SPLithium' : ''].concat(c.mats.map(matLink)).filter(Boolean).join(', ');
 // Upgrade costs per level. The game scales stored values as base x multiplier^(level - 1), rounded down (the same rule
 // it uses for durability); a material's amount goes up by a fixed step every N levels, or by a fraction each level.
-// "level" is the raw level being upgraded from, starting at 1.
+// Developing a part is step 0 of the same series and each upgrade is the next step, so upgrading from raw level L
+// costs base x multiplier^L. Checked against the game: Buzzsaw Masher + from +12 to +13 costs 54,588 SPLithium.
 // levelRows(): a part's values at every upgrade level, with what it costs to reach each one.
 // Values grow as base x factor^(level - 1): attack, defence and durability round down (the game's durability rule),
-// the stat requirement rounds up.
+// and so does the stat requirement (before any decal that lowers requirements).
 function levelRows(d) {
   const prev = PIECES.find(p => p.next === d.id), carry = d.uncap && prev && prev.levels ? prev.levels - 1 : 0;
   const steps = d.upgrade ? upgradeSteps(d) : [], base = d.atk ? d.atk[1] : d.def ? d.def[1] : 0, [gs, gd, gr] = d.grow || [1, 1, 1];
@@ -232,7 +233,7 @@ function levelRows(d) {
   const out = [];
   for (let lv = 1; lv <= (d.levels || 1); lv++) out.push({
     label: '+' + (d.uncap ? carry + lv : lv - 1), stat: Math.floor(at(base, gs, lv) + 1e-7), dur: Math.floor(at(d.dur || 0, gd, lv) + 1e-7),
-    req: d.req ? Math.ceil(at(d.req[1], gr, lv) - 1e-7) : 0, cost: steps[lv - 2] });
+    req: d.req ? Math.floor(at(d.req[1], gr, lv) + 1e-7) : 0, cost: steps[lv - 2] });
   return out;
 }
 function upgradeSteps(d) {
@@ -240,9 +241,9 @@ function upgradeSteps(d) {
   const carry = d.uncap && prev && prev.levels ? prev.levels - 1 : 0;        // an uncapped part carries on from the earlier part's +N
   const steps = [];
   for (let lv = 1; lv < d.levels; lv++) {
-    const mats = u.mats.map(([id, base, add, every]) => [id, Math.floor(base + (every > 0 ? add * Math.floor((lv - 1) / every) : add * (lv - 1)) + 1e-7)]).filter(m => m[1] > 0);
+    const mats = u.mats.map(([id, base, add, every]) => [id, Math.floor(base + (every > 0 ? add * Math.floor(lv / every) : add * lv) + 1e-7)]).filter(m => m[1] > 0);
     const from = d.uncap ? carry + lv : lv - 1;        // an uncapped part's first raw level already shows as carry + 1
-    steps.push({ label: `+${from} → +${from + 1}`, spl: Math.floor(u.spl[0] * Math.pow(u.spl[1], lv - 1) + 1e-7), mats });
+    steps.push({ label: `+${from} → +${from + 1}`, spl: Math.floor(u.spl[0] * Math.pow(u.spl[1], lv) + 1e-7), mats });
   }
   return steps;
 }
