@@ -72,7 +72,7 @@ def part_icon(pid):
     """A part's own icon, else the plain version's (gold '_G' variants), else an earlier tier's."""
     for cand in [pid, re.sub(r'_G$', '', pid)]:
         if icon(cand): return cand
-    m = re.fullmatch(r'(.*_\d\d[0-9A-Z])(\d)', pid)
+    m = re.fullmatch(r'(.*)(\d)', pid)             # ...4, ...3 and so on down from the id's last digit
     if m:
         for n in range(int(m.group(2)) - 1, 0, -1):
             if icon(m.group(1) + str(n)): return m.group(1) + str(n)
