@@ -44,9 +44,9 @@ css += """  .card .shot.tall { aspect-ratio: 108 / 132; padding: 6px; }
   .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .usedby { max-height: 150px; overflow: auto; }
   dialog { width: min(1000px, calc(100vw - 24px)); }
-  .upg { margin-top: 14px; max-height: 330px; overflow: auto; border-top: 1px solid var(--panel-border); padding-top: 10px; }
+  .upg { margin-top: 14px; max-height: 330px; overflow: auto; border-top: 1px solid var(--panel-border); }
   .upg table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
-  .upg th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 2px 12px 4px 0; position: sticky; top: 0; background: var(--panel); }
+  .upg th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 10px 12px 4px 0; position: sticky; top: 0; background: var(--panel); }   /* no gap above the header for rows to show through */
   .upg td { padding: 2px 12px 2px 0; vertical-align: top; }
   .upg td:not(:last-child), .upg th { white-space: nowrap; }
   .upg tr:last-child td { border-top: 1px solid var(--panel-border); }
