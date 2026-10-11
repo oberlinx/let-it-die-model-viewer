@@ -71,6 +71,7 @@ async function buildMesh(info, opts) {
   for (const grp of info.groups) {
     const m = grp.material;
     if (/CutSurface/.test(m.name)) continue;
+    if (grp.part === 'mask' && opts.nomask) continue;
     g.addGroup(grp.start, grp.count, mats.length);
     mats.push(await makeMaterial(m, opts));
   }
@@ -126,7 +127,7 @@ const VIEWS = {
   wide: { target: [0, 91, 0], dist: 400, w: 800, h: 800, fov: 28 },
   body: { target: [0, 91, 0], dist: 400, w: 400, h: 800, fov: 28 },
 };
-async function show(id, view, yaw) {
+async function show(id, view, yaw, nomask) {
   const m = models.find(x => x.id === id);
   const v = VIEWS[view || 'full'];
   renderer.setSize(v.w, v.h);
@@ -135,7 +136,7 @@ async function show(id, view, yaw) {
   const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(120, 260, 300); scene.add(key);
   const rim = new THREE.DirectionalLight(0xbfd0ff, 0.5); rim.position.set(-200, 200, -250); scene.add(rim);
   const root = new THREE.Group(); scene.add(root);
-  root.add(await buildMesh(m.body, { kind: 'body', model: m }));
+  root.add(await buildMesh(m.body, { kind: 'body', model: m, nomask: nomask || Q.has('nomask') }));
   if (m.hair && !Q.has('nohair')) root.add(await buildMesh(m.hair, { kind: 'hair', model: m }));
   root.rotation.y = (yaw || 0) * Math.PI / 180;
   camera = new THREE.PerspectiveCamera(v.fov, v.w / v.h, 1, 2000);
@@ -144,14 +145,15 @@ async function show(id, view, yaw) {
   renderer.render(scene, camera);
   return m.label;
 }
-async function sheet(view, out, cell, yaw, ids) {
+async function sheet(view, out, cell, yaw, ids, nomask) {
   const list = ids ? models.filter(m => ids.includes(m.id)) : models;
   const cols = Math.min(4, list.length), rows = Math.ceil(list.length / cols);
   const c = document.createElement('canvas'); c.width = cols * cell; c.height = rows * cell;
   const x = c.getContext('2d'); x.fillStyle = '#2a2d33'; x.fillRect(0, 0, c.width, c.height);
   let i = 0;
   for (const m of list) {
-    await show(m.id, view, yaw);
+    for (const k in texCache) delete texCache[k];
+    await show(m.id, view, yaw, nomask);
     const px = (i % cols) * cell, py = Math.floor(i / cols) * cell;
     x.drawImage(renderer.domElement, px, py, cell, cell);
     x.fillStyle = '#fff'; x.font = '16px sans-serif'; x.fillText(m.label, px + 8, py + 20); i++;
@@ -170,9 +172,12 @@ async function renderAll() {
   for (const k in VIEWS) { VIEWS[k].w *= 2; VIEWS[k].h *= 2; }
   for (const m of models) {
     for (const k in texCache) delete texCache[k];
-    await show(m.id, 'face', 0); await saveScaled(m.id + '_face.webp', 2);
-    await show(m.id, 'face', 35); await saveScaled(m.id + '_side.webp', 2);
-    await show(m.id, 'body', 0); await saveScaled(m.id + '_body.webp', 2);
+    for (const nm of [false, true]) {
+      const sfx = nm ? '_nomask' : '';
+      await show(m.id, 'face', 0, nm); await saveScaled(m.id + '_face' + sfx + '.webp', 2);
+      await show(m.id, 'face', 35, nm); await saveScaled(m.id + '_side' + sfx + '.webp', 2);
+      await show(m.id, 'body', 0, nm); await saveScaled(m.id + '_body' + sfx + '.webp', 2);
+    }
     await show(m.id, 'body', 180); await saveScaled(m.id + '_back.webp', 2);
   }
   await fetch('/save/done.png', { method: 'POST', body: 'x' });

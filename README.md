@@ -14,7 +14,7 @@ The pictures in `img/` are renders of the game's own meshes and textures, produc
 - `extract.py <out-dir>` – reads `master_body` / `master_asset` from `masters.db`, then dumps each body and hair mesh
   plus its textures (as DDS) and a `models.json` manifest. Needs a local install of the game; edit `GAME` in `upk.py`.
 - `render.html` + `serve.py <dump-dir> <image-dir> <port>` – three.js harness that renders every model
-  (skin, underwear overlay and hair, as the game's material does) and saves the WebP files.
+  (skin, underwear overlay and hair, as the game's material does), with and without the gas mask and saves the WebP files.
 
 Models are shown in their reference pose and lit outside the game engine, so colours are close to but not identical to in-game.
 

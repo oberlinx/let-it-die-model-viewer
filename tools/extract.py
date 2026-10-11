@@ -104,6 +104,40 @@ def export_tex(name, pkgs):
     print('  tex', name, pr['Format'], size)
     return done_tex[name]
 
+def split_mask(m):
+    """The gas mask is a loose piece of the skin section: move its triangles into a group of their own."""
+    pos, idx = m['pos'], m['idx']
+    nv = len(pos) // 3
+    seen = {}
+    par = [seen.setdefault((round(pos[3 * i], 2), round(pos[3 * i + 1], 2), round(pos[3 * i + 2], 2)), i) for i in range(nv)]
+    def find(x):
+        while par[x] != x:
+            par[x] = par[par[x]]; x = par[x]
+        return x
+    out = array('I'); groups = []
+    for g in m['groups']:
+        tris = idx[g['start']:g['start'] + g['count']]
+        mask = array('I')
+        if 'CutSurface' not in g['mat']:
+            for t in range(0, len(tris), 3):
+                a, b, c = find(tris[t]), find(tris[t + 1]), find(tris[t + 2])
+                par[b] = a; par[find(c)] = a
+            comp = {}
+            for t in range(0, len(tris), 3):
+                comp.setdefault(find(tris[t]), []).append(t)
+            big = [ts for ts in comp.values() if len(ts) >= 1000 and min(pos[3 * tris[t] + 1] for t in ts) > 150]
+            if big:
+                assert len(big) == 1
+                drop = set(big[0])
+                keep = array('I')
+                for t in range(0, len(tris), 3):
+                    (mask if t in drop else keep).extend(tris[t:t + 3])
+                tris = keep
+        groups.append(dict(mat=g['mat'], start=len(out), count=len(tris))); out.extend(tris)
+        if mask:
+            groups.append(dict(mat=g['mat'], start=len(out), count=len(mask), part='mask')); out.extend(mask)
+    m['idx'] = out; m['groups'] = groups
+
 done_mesh = {}
 def export_mesh(path):
     """path like CH_Main_NormalFemale0002.Meshes.SK_CH_Main_NormalFemale0002"""
@@ -112,6 +146,7 @@ def export_mesh(path):
     pkgs = pkg_for(prefix)
     p, e = find_export(name, 'SkeletalMesh', pkgs)
     m = read_mesh(p, e)
+    if 'CH_Main' in name: split_mask(m)
     print('mesh', name, 'verts', len(m['pos']) // 3, 'tris', len(m['idx']) // 3, 'from', os.path.basename(p.path))
     for k in ('pos', 'nrm', 'uv', 'idx'):
         m[k].tofile(open(os.path.join(OUT, '%s.%s.bin' % (name, k)), 'wb'))
