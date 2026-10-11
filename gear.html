@@ -101,11 +101,13 @@
   .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
   .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .usedby { max-height: 150px; overflow: auto; }
-  .upg { margin-top: 14px; max-height: 260px; overflow: auto; border-top: 1px solid var(--panel-border); padding-top: 10px; }
+  dialog { width: min(1000px, calc(100vw - 24px)); }
+  .upg { margin-top: 14px; max-height: 330px; overflow: auto; border-top: 1px solid var(--panel-border); padding-top: 10px; }
   .upg table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
   .upg th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 2px 12px 4px 0; position: sticky; top: 0; background: var(--panel); }
   .upg td { padding: 2px 12px 2px 0; vertical-align: top; }
-  .upg td:first-child, .upg td:nth-child(2) { white-space: nowrap; }
+  .upg td:not(:last-child), .upg th { white-space: nowrap; }
+  .upg tr:last-child td { border-top: 1px solid var(--panel-border); }
   .upg a { color: var(--text); }
 </style>
 </head>
@@ -135,7 +137,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal "D" weapons have none. The two attack or defence numbers are the pair the game stores for each piece. Upgrade costs per level are worked out from the stored base amounts and growth factors using the same rounding rule the game is known to use for durability; they have not been checked against the game level by level. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. Blueprints are left out because each one maps to a piece already listed.</p>
+    <p>Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal "D" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. Upgrade costs per level are worked out from the stored base amounts and growth factors using the same rounding rule the game is known to use for durability; they have not been checked against the game level by level. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. Blueprints are left out because each one maps to a piece already listed.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -232,6 +234,19 @@ const cost = c => [c.spl ? num(c.spl) + ' SPLithium' : ''].concat(c.mats.map(mat
 // Upgrade costs per level. The game scales stored values as base x multiplier^(level - 1), rounded down (the same rule
 // it uses for durability); a material's amount goes up by a fixed step every N levels, or by a fraction each level.
 // "level" is the raw level being upgraded from, starting at 1.
+// levelRows(): a part's values at every upgrade level, with what it costs to reach each one.
+// Values grow as base x factor^(level - 1): attack, defence and durability round down (the game's durability rule),
+// the stat requirement rounds up.
+function levelRows(d) {
+  const prev = PIECES.find(p => p.next === d.id), carry = d.uncap && prev && prev.levels ? prev.levels - 1 : 0;
+  const steps = d.upgrade ? upgradeSteps(d) : [], base = d.atk ? d.atk[1] : d.def ? d.def[1] : 0, [gs, gd, gr] = d.grow || [1, 1, 1];
+  const at = (v, g, lv) => v * Math.pow(g || 1, lv - 1);
+  const out = [];
+  for (let lv = 1; lv <= (d.levels || 1); lv++) out.push({
+    label: '+' + (d.uncap ? carry + lv : lv - 1), stat: Math.floor(at(base, gs, lv) + 1e-7), dur: Math.floor(at(d.dur || 0, gd, lv) + 1e-7),
+    req: d.req ? Math.ceil(at(d.req[1], gr, lv) - 1e-7) : 0, cost: steps[lv - 2] });
+  return out;
+}
 function upgradeSteps(d) {
   const u = d.upgrade, prev = PIECES.find(p => p.next === d.id);
   const carry = d.uncap && prev && prev.levels ? prev.levels - 1 : 0;        // an uncapped part carries on from the earlier part's +N
@@ -258,11 +273,7 @@ function openItem(id) {
   $('d-tiers').innerHTML = line.length > 1 ? line.map(t => `<button data-tier="${t.id}" aria-pressed="${t.id === id}">${esc(t.name)}</button>`).join('') : '';
   const rows = [['Id', esc(d.id)], ['Kind', esc([d.sub || d.type, d.weapon].filter(Boolean).join(' · '))]];
   if (d.category) rows.push(['Category', esc(d.category)]);
-  if (d.atk) rows.push(['Attack', `${num(d.atk[0])} – ${num(d.atk[1])}`]);
-  if (d.def) rows.push(['Defence', `${num(d.def[0])} – ${num(d.def[1])}`]);
-  if (d.dur) rows.push(['Durability', num(d.dur)]);
   if (d.ammo) rows.push(['Ammo capacity', num(d.ammo)]);
-  if (d.req) rows.push(['Requires', `${esc(d.req[0])} ${num(d.req[1])}`]);
   if (d.rage) rows.push(['Rage move', esc(d.rage)]);
   if (d.craft) rows.push(['Develop', cost(d.craft)]);
   if (d.buy) rows.push(['Shop price', num(d.buy) + ' Kill Coins']);
@@ -272,11 +283,11 @@ function openItem(id) {
   const used = USED[id];
   if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="#${pid}">${esc(BY_ID[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
   $('d-info').innerHTML = rows.map(([k2, v]) => `<dt>${k2}</dt><dd>${v}</dd>`).join('');
-  const steps = d.upgrade ? upgradeSteps(d) : [];
-  $('d-up').hidden = !steps.length;
-  $('d-up').innerHTML = steps.length ? `<table><tr><th>Upgrade</th><th>SPLithium</th><th>Materials</th></tr>` +
-    steps.map(s => `<tr><td>${s.label}</td><td>${num(s.spl)}</td><td>${s.mats.map(matLink).join(', ') || '–'}</td></tr>`).join('') +
-    `<tr><td>Total</td><td>${num(steps.reduce((n, s) => n + s.spl, 0))}</td><td>${Object.entries(steps.reduce((t, s) => { for (const [id, n] of s.mats) t[id] = (t[id] || 0) + n; return t; }, {})).map(([id, n]) => matLink([id, n])).join(', ') || '–'}</td></tr></table>` : '';
+  const lv = d.grow ? levelRows(d) : [], steps = lv.map(r => r.cost).filter(Boolean), what = d.atk ? 'Attack' : 'Defence';
+  $('d-up').hidden = !lv.length;
+  $('d-up').innerHTML = lv.length ? `<table><tr><th>Level</th><th>${what}</th><th>Durability</th><th>Needs${d.req ? ' ' + esc(d.req[0]) : ''}</th><th>Upgrade cost</th><th>Materials</th></tr>` +
+    lv.map(r => `<tr><td>${r.label}</td><td>${r.stat ? num(r.stat) : '–'}</td><td>${r.dur ? num(r.dur) : '–'}</td><td>${r.req ? num(r.req) : '–'}</td><td>${r.cost ? num(r.cost.spl) + ' SPL' : ''}</td><td>${r.cost ? r.cost.mats.map(matLink).join(', ') : ''}</td></tr>`).join('') +
+    (steps.length < 2 ? '</table>' : `<tr><td>Total</td><td></td><td></td><td></td><td>${num(steps.reduce((n, s) => n + s.spl, 0))} SPL</td><td>${Object.entries(steps.reduce((t, s) => { for (const [id, n] of s.mats) t[id] = (t[id] || 0) + n; return t; }, {})).map(([id, n]) => matLink([id, n])).join(', ') || '–'}</td></tr></table>`) : '';
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + d.id);
 }

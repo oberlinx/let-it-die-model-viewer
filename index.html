@@ -101,11 +101,13 @@
   .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
   .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .usedby { max-height: 150px; overflow: auto; }
-  .upg { margin-top: 14px; max-height: 260px; overflow: auto; border-top: 1px solid var(--panel-border); padding-top: 10px; }
+  dialog { width: min(1000px, calc(100vw - 24px)); }
+  .upg { margin-top: 14px; max-height: 330px; overflow: auto; border-top: 1px solid var(--panel-border); padding-top: 10px; }
   .upg table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
   .upg th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 2px 12px 4px 0; position: sticky; top: 0; background: var(--panel); }
   .upg td { padding: 2px 12px 2px 0; vertical-align: top; }
-  .upg td:first-child, .upg td:nth-child(2) { white-space: nowrap; }
+  .upg td:not(:last-child), .upg th { white-space: nowrap; }
+  .upg tr:last-child td { border-top: 1px solid var(--panel-border); }
   .upg a { color: var(--text); }
   .hero { margin: 8px 0 22px; }
   .hero input { width: min(560px, 100%); font-size: 15px; padding: 10px 12px; }

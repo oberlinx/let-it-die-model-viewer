@@ -94,6 +94,10 @@ for p in parts:
     elif p['def']:
         g['def'] = [p['def0'], p['def']]
     if p['lvllmt']: g['req'] = [p['lvllmttp'], p['lvllmt']]
+    # how each value grows per upgrade level (value x factor^(level - 1)): [attack or defence, durability, requirement]
+    g['grow'] = [p['atk_c'] if p['type'] == 'PTTP_ARM' else p['def_c'], p['dur_c'], p['lvllmt_c']]
+    g['levels'] = max(1, p['reflvllmt'])        # highest raw level; a part starts at raw level 1
+    if p['is_limitbreak']: g['uncap'] = True      # continues an earlier part's +N instead of starting at +0
     if p['nextptid'] and names.get(p['nextptid']): g['next'] = p['nextptid']
     if p['platform']: g['psOnly'] = True
     gear.append(g)
