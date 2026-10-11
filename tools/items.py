@@ -78,10 +78,11 @@ def part_icon(pid):
             if icon(m.group(1) + str(n)): return m.group(1) + str(n)
     return None
 
+SKIP = {'PT_ARM_WP023_001'}      # Landmine: in the data but not obtainable in the game
 gear = []
 for p in parts:
     name = names[p['id']]
-    if not name: continue
+    if not name or p['id'] in SKIP: continue
     wp = re.match(r'PT_ARM_WP(\d\d\d)_', p['id'])
     g = dict(id=p['id'], name=name, type=TYPE.get(p['type'], p['type']), category=p['drcat'].replace('DRCAT_', '').title() if p['drcat'] else '',
              rarity=p['rarity'], icon=part_icon(p['id']), dur=p['dur'], buy=p['price_s'], sell=p['price_b'])   # price_s: shop price, price_b: what you get back
