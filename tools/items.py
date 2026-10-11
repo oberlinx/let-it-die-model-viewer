@@ -78,7 +78,7 @@ def part_icon(pid):
             if icon(m.group(1) + str(n)): return m.group(1) + str(n)
     return None
 
-SKIP = {'PT_ARM_WP023_001'}      # Landmine: in the data but not obtainable in the game
+SKIP = {'PT_ARM_WP023_001', 'PT_ARM_WP000_001', 'PT_ARM_Sand'}      # Landmine, Fists, Sand: in the data but not gear you can own
 gear = []
 for p in parts:
     name = names[p['id']]
