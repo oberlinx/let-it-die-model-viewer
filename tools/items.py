@@ -68,6 +68,24 @@ TYPE = {'PTTP_ARM': 'Weapon', 'PTTP_HEAD': 'Head', 'PTTP_BODY': 'Body', 'PTTP_LE
 rage = {r['id']: clean(tx(r['name'])) for r in rows('select id, name from master_sklmv')}
 armtype = {r['id']: clean(tx(r['name']) or r['name']) for r in rows('select id, name from master_ptarm_type')}
 parts = rows('select * from master_part order by sort_no, id')
+# Scaling: every attack animation says how much of its damage follows STR and how much DEX (strrate/dexrate, in percent).
+# A weapon's animations carry its number (ANI_CH_ATK_WP06_... for PT_ARM_WP006_...). Most weapons use one split for
+# every attack; where shots differ from swings both are kept, the commonest first.
+_scale = {}
+for r in rows('select id, strrate, dexrate from master_atk_scale'):
+    m = re.search(r'_WP(\d\d)_', r['id'])
+    if m:
+        k = (r['strrate'], r['dexrate'], 'shots' if re.search('Fire|Shot', r['id']) else 'other attacks')
+        d = _scale.setdefault(int(m.group(1)), {}); d[k[:2]] = [d.get(k[:2], [0])[0] + 1, k[2]]
+scale_of = {n: [[s_, d_, lbl] for (s_, d_), (cnt, lbl) in sorted(d.items(), key=lambda kv: -kv[1][0])] for n, d in _scale.items()}
+_by_rage = {}       # reskins without animations of their own (Longsword RE, Masamune Blade TDM) share a rage move with the original
+for p in parts:
+    m = re.match(r'PT_ARM_WP(\d\d\d)_', p['id'])
+    if m and int(m.group(1)) in scale_of: _by_rage.setdefault(p['sklmv'], int(m.group(1)))
+ATTR = {'ATKATTR_SLASH': 'Slash', 'ATKATTR_HIT': 'Blunt', 'ATKATTR_SHOOT': 'Piercing', 'ATKATTR_FIRE': 'Fire', 'ATKATTR_ELEC': 'Electric', 'ATKATTR_POISON': 'Poison'}
+dmg_of = {}
+for r in rows('select id, attr, value from master_part_atkattr order by value desc'):
+    if r['attr'] in ATTR and r['value']: dmg_of.setdefault(r['id'], []).append([ATTR[r['attr']], r['value']])
 names = {p['id']: clean(tx(p['name']) or '') for p in parts}
 
 def part_icon(pid):
@@ -93,6 +111,9 @@ for p in parts:
         if wp and 'PTARMTP_%02d' % int(wp.group(1)) in armtype: g['weapon'] = armtype['PTARMTP_%02d' % int(wp.group(1))]
         if p['sklmv'] in rage and rage[p['sklmv']]: g['rage'] = rage[p['sklmv']]
         if p['capacity']: g['ammo'] = p['capacity']
+        sc = wp and (scale_of.get(int(wp.group(1))) or scale_of.get(_by_rage.get(p['sklmv'])))
+        if sc: g['scale'] = sc
+        if p['id'] in dmg_of: g['dmg'] = dmg_of[p['id']]
     elif p['def']:
         g['def'] = [p['def0'], p['def']]
     if p['lvllmt']: g['req'] = [p['lvllmttp'], p['lvllmt']]
