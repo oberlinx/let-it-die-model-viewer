@@ -7,10 +7,10 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="website">
 <meta property="og:title" content="LET IT DIE Gear">
-<meta property="og:description" content="Every weapon, armour piece and crafting material in LET IT DIE, with its icon, stats and crafting costs.">
+<meta property="og:description" content="Every weapon and armour piece in LET IT DIE, with its icon, stats at every upgrade level and crafting costs.">
 <meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="description" content="Every weapon, armour piece and crafting material in LET IT DIE, with its icon, stats and crafting costs.">
+<meta name="description" content="Every weapon and armour piece in LET IT DIE, with its icon, stats at every upgrade level and crafting costs.">
 <style>
   :root {
     --bg: #0a0a0a; --bg-raised: #131313; --panel: #161616;
@@ -113,16 +113,16 @@
 </head>
 <body>
 <div class="wrap">
-  <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html" aria-current="page">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
+  <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html" aria-current="page">Gear</a><a href="materials.html">Materials</a><a href="mushrooms.html">Mushrooms</a></nav>
   <header>
     <h1>LET IT DIE <span>Gear</span></h1>
-    <p>Every weapon, armour piece and crafting material in the game data, with its icon, stats and what it costs to develop and upgrade. Pieces that upgrade into one another are grouped into one line.</p>
+    <p>Every weapon and armour piece in the game data, with its icon, its stats at every upgrade level and what it costs to develop and upgrade. Pieces that upgrade into one another are grouped into one line.</p>
   </header>
 
   <div class="bar">
     <input type="search" id="q" placeholder="Search name or id" aria-label="Search gear">
     <div class="seg"><span class="lbl">Kind</span><div class="btns" id="kind">
-      <button data-v="" aria-pressed="true">All</button><button data-v="Weapon" aria-pressed="false">Weapons</button><button data-v="Head" aria-pressed="false">Head</button><button data-v="Body" aria-pressed="false">Body</button><button data-v="Legs" aria-pressed="false">Legs</button><button data-v="Material" aria-pressed="false">Materials</button>
+      <button data-v="" aria-pressed="true">All</button><button data-v="Weapon" aria-pressed="false">Weapons</button><button data-v="Head" aria-pressed="false">Head</button><button data-v="Body" aria-pressed="false">Body</button><button data-v="Legs" aria-pressed="false">Legs</button>
     </div></div>
     <div class="seg"><span class="lbl">Show</span><div class="btns" id="group">
       <button data-v="lines" aria-pressed="true">Upgrade lines</button><button data-v="all" aria-pressed="false">Every tier</button>
@@ -137,7 +137,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal "D" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. The per-level attack values match the game for the pieces checked (Jungle Machete, 32 at +4; Buzzsaw Masher +, 2,499 at +12 and 2,574 at +13). Upgrade costs per level are worked out from the stored base amounts and growth factors, and match the game for the step checked (Buzzsaw Masher + from +12 to +13: 54,588 SPLithium and the same five materials). The stat requirement shown is before any decal that lowers requirements. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. "Overlimit" marks the uncapped tier of a line, which the game itself gives the same name as the tier before it. Blueprints are left out because each one maps to a piece already listed.</p>
+    <p>Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. Crafting materials have their own page. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal "D" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. The per-level attack values match the game for the pieces checked (Jungle Machete, 32 at +4; Buzzsaw Masher +, 2,499 at +12 and 2,574 at +13). Upgrade costs per level are worked out from the stored base amounts and growth factors, and match the game for the step checked (Buzzsaw Masher + from +12 to +13: 54,588 SPLithium and the same five materials). The stat requirement shown is before any decal that lowers requirements. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. "Overlimit" marks the uncapped tier of a line, which the game itself gives the same name as the tier before it. Blueprints are left out because each one maps to a piece already listed.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -172,8 +172,8 @@ function bindSeg(id, key) {
   });
 }
 const PIECES = GEAR.gear.map((g, i) => Object.assign({ order: i }, g));
-const MATS = GEAR.materials.map((m, i) => Object.assign({ order: 100000 + i }, m, { type: 'Material', sub: m.type }));
-const ALL = PIECES.concat(MATS);
+const ALL = PIECES;
+const MAT_NAME = Object.assign({}, GEAR.names, Object.fromEntries(GEAR.materials.map(m => [m.id, m.name])));     // materials have their own page
 const BY_ID = Object.fromEntries(ALL.map(d => [d.id, d]));
 // Upgrade lines: follow each piece's "upgrades to" link from the pieces nothing upgrades into.
 const LINE_OF = {};
@@ -189,11 +189,6 @@ for (const d of ALL) if (!LINE_OF[d.id]) walk(d);
 const SETS = {};
 const setKey = id => { const m = /^PT_([A-Z]+)_(HEAD|TOPS|BTM)_(.+)$/.exec(id); return m && [m[1] + '_' + m[3], m[2]]; };
 for (const p of PIECES) { const k = setKey(p.id); if (k) (SETS[k[0]] = SETS[k[0]] || {})[k[1]] = p; }
-// What each material is used for.
-const USED = {};
-for (const p of PIECES) for (const how of ['craft', 'upgrade']) for (const [mid] of (p[how] ? p[how].mats : [])) {
-  const u = USED[mid] = USED[mid] || new Map(); u.set(p.id, u.has(p.id) ? 'both' : how);
-}
 const state = { q: '', kind: '', group: 'lines', cat: '', wtype: '', rarity: '', sort: 'game', open: null };
 let list = [];
 const upper = (d, k) => d[k] ? d[k][1] : -1;
@@ -226,8 +221,8 @@ function renderGrid() {
     : '<div class="empty">Nothing matches these filters.</div>';
 }
 function matLink([id, n]) {
-  const name = (BY_ID[id] && BY_ID[id].name) || GEAR.names[id] || id;
-  const href = BY_ID[id] ? '#' + id : id.startsWith('MSR_') ? 'mushrooms.html#' + id : '';
+  const name = MAT_NAME[id] || id;
+  const href = id.startsWith('MSR_') ? 'mushrooms.html#' + id : MAT_NAME[id] ? 'materials.html#' + id : '';
   return (n ? n + ' × ' : '') + (href ? `<a href="${href}">${esc(name)}</a>` : esc(name));
 }
 const cost = c => [c.spl ? num(c.spl) + ' SPLithium' : ''].concat(c.mats.map(matLink)).filter(Boolean).join(', ');
@@ -261,7 +256,10 @@ function upgradeSteps(d) {
 }
 function openItem(id) {
   const d = BY_ID[id];
-  if (!d) return;
+  if (!d) {                                 // links made before materials moved to their own page
+    if (GEAR.materials.some(m => m.id === id)) location.replace('materials.html#' + id);
+    return;
+  }
   state.open = id;
   $('d-name').textContent = d.name;
   $('d-tags').innerHTML = stars(d.rarity, 7) + (d.psOnly ? '<span class="tag">PS only</span>' : '');
@@ -281,8 +279,6 @@ function openItem(id) {
   if (d.sell) rows.push(['Sells for', num(d.sell) + ' Kill Coins']);
   const k = setKey(id), set = k && SETS[k[0]];
   if (set && Object.keys(set).length > 1) rows.push(['Set', ['HEAD', 'TOPS', 'BTM'].filter(s => set[s]).map(s => set[s].id === id ? esc(set[s].name) : `<a href="#${set[s].id}">${esc(set[s].name)}</a>`).join(' · ')]);
-  const used = USED[id];
-  if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="#${pid}">${esc(BY_ID[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
   $('d-info').innerHTML = rows.map(([k2, v]) => `<dt>${k2}</dt><dd>${v}</dd>`).join('');
   const lv = d.grow ? levelRows(d) : [], steps = lv.map(r => r.cost).filter(Boolean), what = d.atk ? 'Attack' : 'Defence';
   $('d-up').hidden = !lv.length;

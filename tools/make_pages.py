@@ -7,7 +7,7 @@ The stylesheet is taken from decals.html so the pages stay in step with the hand
 import json, re, sys
 SRC = sys.argv[1]
 SITE = 'https://oberlinx.github.io/let-it-die-model-viewer/'
-NAV = [('./', 'Home'), ('models.html', 'Fighter Models'), ('decals.html', 'Skill Decals'), ('gear.html', 'Gear'), ('mushrooms.html', 'Mushrooms')]
+NAV = [('./', 'Home'), ('models.html', 'Fighter Models'), ('decals.html', 'Skill Decals'), ('gear.html', 'Gear'), ('materials.html', 'Materials'), ('mushrooms.html', 'Mushrooms')]
 
 
 def nav(current):
@@ -149,11 +149,11 @@ DIALOG = """<dialog id="dlg">
 
 # ------------------------------------------------------------------ gear
 page('gear.html', 'Gear',
-     'Every weapon, armour piece and crafting material in LET IT DIE, with its icon, stats and crafting costs.',
-     'Every weapon, armour piece and crafting material in the game data, with its icon, stats and what it costs to develop and upgrade. Pieces that upgrade into one another are grouped into one line.',
+     'Every weapon and armour piece in LET IT DIE, with its icon, stats at every upgrade level and crafting costs.',
+     'Every weapon and armour piece in the game data, with its icon, its stats at every upgrade level and what it costs to develop and upgrade. Pieces that upgrade into one another are grouped into one line.',
      """    <input type="search" id="q" placeholder="Search name or id" aria-label="Search gear">
     <div class="seg"><span class="lbl">Kind</span><div class="btns" id="kind">
-      <button data-v="" aria-pressed="true">All</button><button data-v="Weapon" aria-pressed="false">Weapons</button><button data-v="Head" aria-pressed="false">Head</button><button data-v="Body" aria-pressed="false">Body</button><button data-v="Legs" aria-pressed="false">Legs</button><button data-v="Material" aria-pressed="false">Materials</button>
+      <button data-v="" aria-pressed="true">All</button><button data-v="Weapon" aria-pressed="false">Weapons</button><button data-v="Head" aria-pressed="false">Head</button><button data-v="Body" aria-pressed="false">Body</button><button data-v="Legs" aria-pressed="false">Legs</button>
     </div></div>
     <div class="seg"><span class="lbl">Show</span><div class="btns" id="group">
       <button data-v="lines" aria-pressed="true">Upgrade lines</button><button data-v="all" aria-pressed="false">Every tier</button>
@@ -162,10 +162,10 @@ page('gear.html', 'Gear',
     <label class="seg"><span class="lbl">Weapon type</span><select id="wtype"><option value="">All</option></select></label>
     <label class="seg"><span class="lbl">Rarity</span><select id="rarity"><option value="">Any</option></select></label>
     <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="atk">Attack</option><option value="def">Defence</option></select></label>""",
-     "Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal \"D\" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. The per-level attack values match the game for the pieces checked (Jungle Machete, 32 at +4; Buzzsaw Masher +, 2,499 at +12 and 2,574 at +13). Upgrade costs per level are worked out from the stored base amounts and growth factors, and match the game for the step checked (Buzzsaw Masher + from +12 to +13: 54,588 SPLithium and the same five materials). The stat requirement shown is before any decal that lowers requirements. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. \"Overlimit\" marks the uncapped tier of a line, which the game itself gives the same name as the tier before it. Blueprints are left out because each one maps to a piece already listed.",
+     "Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. Crafting materials have their own page. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal \"D\" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. The per-level attack values match the game for the pieces checked (Jungle Machete, 32 at +4; Buzzsaw Masher +, 2,499 at +12 and 2,574 at +13). Upgrade costs per level are worked out from the stored base amounts and growth factors, and match the game for the step checked (Buzzsaw Masher + from +12 to +13: 54,588 SPLithium and the same five materials). The stat requirement shown is before any decal that lowers requirements. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. \"Overlimit\" marks the uncapped tier of a line, which the game itself gives the same name as the tier before it. Blueprints are left out because each one maps to a piece already listed.",
      DIALOG % '', 'gear.js', r"""const PIECES = GEAR.gear.map((g, i) => Object.assign({ order: i }, g));
-const MATS = GEAR.materials.map((m, i) => Object.assign({ order: 100000 + i }, m, { type: 'Material', sub: m.type }));
-const ALL = PIECES.concat(MATS);
+const ALL = PIECES;
+const MAT_NAME = Object.assign({}, GEAR.names, Object.fromEntries(GEAR.materials.map(m => [m.id, m.name])));     // materials have their own page
 const BY_ID = Object.fromEntries(ALL.map(d => [d.id, d]));
 // Upgrade lines: follow each piece's "upgrades to" link from the pieces nothing upgrades into.
 const LINE_OF = {};
@@ -181,11 +181,6 @@ for (const d of ALL) if (!LINE_OF[d.id]) walk(d);
 const SETS = {};
 const setKey = id => { const m = /^PT_([A-Z]+)_(HEAD|TOPS|BTM)_(.+)$/.exec(id); return m && [m[1] + '_' + m[3], m[2]]; };
 for (const p of PIECES) { const k = setKey(p.id); if (k) (SETS[k[0]] = SETS[k[0]] || {})[k[1]] = p; }
-// What each material is used for.
-const USED = {};
-for (const p of PIECES) for (const how of ['craft', 'upgrade']) for (const [mid] of (p[how] ? p[how].mats : [])) {
-  const u = USED[mid] = USED[mid] || new Map(); u.set(p.id, u.has(p.id) ? 'both' : how);
-}
 const state = { q: '', kind: '', group: 'lines', cat: '', wtype: '', rarity: '', sort: 'game', open: null };
 let list = [];
 const upper = (d, k) => d[k] ? d[k][1] : -1;
@@ -218,8 +213,8 @@ function renderGrid() {
     : '<div class="empty">Nothing matches these filters.</div>';
 }
 function matLink([id, n]) {
-  const name = (BY_ID[id] && BY_ID[id].name) || GEAR.names[id] || id;
-  const href = BY_ID[id] ? '#' + id : id.startsWith('MSR_') ? 'mushrooms.html#' + id : '';
+  const name = MAT_NAME[id] || id;
+  const href = id.startsWith('MSR_') ? 'mushrooms.html#' + id : MAT_NAME[id] ? 'materials.html#' + id : '';
   return (n ? n + ' × ' : '') + (href ? `<a href="${href}">${esc(name)}</a>` : esc(name));
 }
 const cost = c => [c.spl ? num(c.spl) + ' SPLithium' : ''].concat(c.mats.map(matLink)).filter(Boolean).join(', ');
@@ -253,7 +248,10 @@ function upgradeSteps(d) {
 }
 function openItem(id) {
   const d = BY_ID[id];
-  if (!d) return;
+  if (!d) {                                 // links made before materials moved to their own page
+    if (GEAR.materials.some(m => m.id === id)) location.replace('materials.html#' + id);
+    return;
+  }
   state.open = id;
   $('d-name').textContent = d.name;
   $('d-tags').innerHTML = stars(d.rarity, 7) + (d.psOnly ? '<span class="tag">PS only</span>' : '');
@@ -273,8 +271,6 @@ function openItem(id) {
   if (d.sell) rows.push(['Sells for', num(d.sell) + ' Kill Coins']);
   const k = setKey(id), set = k && SETS[k[0]];
   if (set && Object.keys(set).length > 1) rows.push(['Set', ['HEAD', 'TOPS', 'BTM'].filter(s => set[s]).map(s => set[s].id === id ? esc(set[s].name) : `<a href="#${set[s].id}">${esc(set[s].name)}</a>`).join(' · ')]);
-  const used = USED[id];
-  if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="#${pid}">${esc(BY_ID[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
   $('d-info').innerHTML = rows.map(([k2, v]) => `<dt>${k2}</dt><dd>${v}</dd>`).join('');
   const lv = d.grow ? levelRows(d) : [], steps = lv.map(r => r.cost).filter(Boolean), what = d.atk ? 'Attack' : 'Defence';
   $('d-up').hidden = !lv.length;
@@ -299,6 +295,62 @@ bindSeg('kind', 'kind');
 bindSeg('group', 'group');
 $('q').addEventListener('input', e => { state.q = e.target.value; renderGrid(); });
 for (const [id, key] of [['cat', 'cat'], ['wtype', 'wtype'], ['rarity', 'rarity'], ['sort', 'sort']]) $(id).addEventListener('change', e => { state[key] = e.target.value; renderGrid(); });""")
+
+# ------------------------------------------------------------------ materials
+page('materials.html', 'Materials',
+     'Every crafting material in LET IT DIE, with its icon, price and every piece of gear that needs it.',
+     'Every crafting material and consumable in the game data, with its icon, price and every weapon and armour piece that needs it.',
+     """    <input type="search" id="q" placeholder="Search name or id" aria-label="Search materials">
+    <label class="seg"><span class="lbl">Rarity</span><select id="rarity"><option value="">Any</option></select></label>
+    <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="used">Most used</option></select></label>""",
+     "Data comes from the game's <code>master_item</code> table, and the uses from <code>master_part_research</code>: a piece is listed under a material if developing it or any of its upgrade levels needs that material. Skillshrooms are also crafting materials; they are on the Mushrooms page.",
+     DIALOG % '', 'gear.js', r"""const ALL = GEAR.materials.map((m, i) => Object.assign({ order: i }, m));
+const BY_ID = Object.fromEntries(ALL.map(d => [d.id, d]));
+const PIECE = Object.fromEntries(GEAR.gear.map(g => [g.id, g]));
+// What each material is used for: piece id -> 'craft', 'upgrade' or 'both'.
+const USED = {};
+for (const p of GEAR.gear) for (const how of ['craft', 'upgrade']) for (const [mid] of (p[how] ? p[how].mats : [])) {
+  const u = USED[mid] = USED[mid] || new Map(); u.set(p.id, u.has(p.id) ? 'both' : how);
+}
+const uses = d => USED[d.id] ? USED[d.id].size : 0;
+const state = { q: '', rarity: '', sort: 'game', open: null };
+let list = [];
+function renderGrid() {
+  const q = state.q.trim().toLowerCase();
+  list = ALL.filter(d => (!state.rarity || d.rarity === +state.rarity) && (!q || (d.name + ' ' + d.id + ' ' + (d.desc || '')).toLowerCase().includes(q)));
+  const by = { game: (a, b) => a.order - b.order, name: (a, b) => a.name.localeCompare(b.name), rarity: (a, b) => b.rarity - a.rarity || a.order - b.order, used: (a, b) => uses(b) - uses(a) || a.order - b.order };
+  list.sort(by[state.sort]);
+  $('count').textContent = `${list.length} of ${ALL.length} materials`;
+  $('grid').innerHTML = list.length ? list.map(d => `<button class="card" data-id="${d.id}"><div class="shot tall">${d.icon ? `<img loading="lazy" alt="" src="${pic(d.icon)}">` : ''}</div>
+    <div class="meta"><div class="name">${esc(d.name)}</div><div class="sub">${uses(d) ? `used by ${uses(d)}` : esc(d.type)}</div><div>${stars(d.rarity, 8)}</div></div></button>`).join('')
+    : '<div class="empty">Nothing matches these filters.</div>';
+}
+function openItem(id) {
+  const d = BY_ID[id];
+  if (!d) return;
+  state.open = id;
+  $('d-name').textContent = d.name;
+  $('d-tags').innerHTML = stars(d.rarity, 8) + (d.psOnly ? '<span class="tag">PS only</span>' : '');
+  $('d-img').src = d.icon ? pic(d.icon) : '';
+  $('d-desc').textContent = d.desc || '';
+  $('d-tiers').innerHTML = ''; $('d-extra').innerHTML = '';
+  const rows = [['Id', esc(d.id)], ['Kind', esc(d.type)]];
+  if (d.buy) rows.push(['Shop price', num(d.buy) + ' Kill Coins']);
+  if (d.sell) rows.push(['Sells for', num(d.sell) + ' Kill Coins']);
+  const used = USED[id];
+  if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="gear.html#${pid}">${esc(PIECE[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
+  $('d-info').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  if (!$('dlg').open) $('dlg').showModal();
+  history.replaceState(null, '', '#' + d.id);
+}
+function step(n) {
+  const at = list.findIndex(d => d.id === state.open);
+  if (list.length) openItem(list[(Math.max(at, 0) + n + list.length) % list.length].id);
+}
+for (const r of [...new Set(ALL.map(d => d.rarity).filter(r => r > 0))].sort((a, b) => a - b)) $('rarity').add(new Option(r, r));
+$('q').addEventListener('input', e => { state.q = e.target.value; renderGrid(); });
+$('rarity').addEventListener('change', e => { state.rarity = e.target.value; renderGrid(); });
+$('sort').addEventListener('change', e => { state.sort = e.target.value; renderGrid(); });""")
 
 # ------------------------------------------------------------------ mushrooms
 page('mushrooms.html', 'Mushrooms &amp; Beasts',
@@ -423,8 +475,10 @@ if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.has
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/%s_face.webp"></div>' % i for i in ('BODY_FEMALE_001', 'BODY_MALE_004', 'BODY_FEMALE_007', 'BODY_MALE_008'))}</div></a>
     <a class="section" href="decals.html"><h2>Skill Decals</h2><p>All 368 decals: icon, effect, rarity, where each comes from, normal and premium.</p>
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/decals/%s.webp"></div>' % i for i in ('SKL_DEATH_PROOF', 'SKL_ATK_CHARGED', 'SKL_MONEYUP_01', 'SKL_SHOVEL_ABILITY_UP'))}</div></a>
-    <a class="section" href="gear.html"><h2>Gear</h2><p>{len(gear['gear']):,} weapons and armour pieces plus {len(gear['materials'])} materials: stats, upgrade lines and crafting costs.</p>
-      <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/items/%s.webp"></div>' % i for i in ('PT_ARM_WP020_001', 'PT_MIL_HEAD_010', 'PT_SPO_TOPS_006', 'ITMT_STONE_TBR_5'))}</div></a>
+    <a class="section" href="gear.html"><h2>Gear</h2><p>{len(gear['gear']):,} weapons and armour pieces: stats at every upgrade level, upgrade lines and crafting costs.</p>
+      <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/items/%s.webp"></div>' % i for i in ('PT_ARM_WP020_001', 'PT_MIL_HEAD_010', 'PT_SPO_TOPS_006', 'PT_ARM_WP006_002'))}</div></a>
+    <a class="section" href="materials.html"><h2>Materials</h2><p>{len(gear['materials'])} crafting materials and consumables: prices and every piece of gear that needs each one.</p>
+      <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/items/%s.webp"></div>' % i for i in ('ITMT_IRON_4', 'ITMT_STONE_TBR_5', 'ITMT_FIBER_7', 'ITMT_WOOD_1'))}</div></a>
     <a class="section" href="mushrooms.html"><h2>Mushrooms &amp; Beasts</h2><p>{len(shrooms['mushrooms'])} mushrooms and {len(shrooms['beasts'])} edible beasts: effects raw and grilled, and the floors they appear on.</p>
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/items/%s.webp"></div>' % i for i in ('MSR_016', 'MSR_051', 'BST_FROG', 'BST_TURTLE'))}</div></a>
   </main>
@@ -449,7 +503,7 @@ const INDEX = [].concat(
   GASMASKS.map(m => ['Gas masks', m.name, 'Gas mask ' + m.no, 'models.html#masks', m.icon ? `img/items/${{m.icon}}.webp` : '', m.female + ' ' + m.male]),
   DECALS.map(d => ['Skill decals', d.name + (d.premium ? ' (Premium)' : ''), d.id, 'decals.html#' + d.id, `img/decals/${{d.icon}}.webp`, d.desc]),
   GEAR.gear.map(g => ['Gear', g.name, g.id, 'gear.html#' + g.id, g.icon ? `img/items/${{g.icon}}.webp` : '', [g.type, g.weapon, g.category].join(' ')]),
-  GEAR.materials.map(g => ['Materials', g.name, g.id, 'gear.html#' + g.id, g.icon ? `img/items/${{g.icon}}.webp` : '', g.desc || '']),
+  GEAR.materials.map(g => ['Materials', g.name, g.id, 'materials.html#' + g.id, g.icon ? `img/items/${{g.icon}}.webp` : '', g.desc || '']),
   SHROOMS.mushrooms.map(m => ['Mushrooms', m.name, m.id, 'mushrooms.html#' + m.id, m.icon ? `img/items/${{m.icon}}.webp` : '', [m.raw.effect && m.raw.effect.name, m.grilled && m.grilled.name].join(' ')]),
   SHROOMS.beasts.map(b => ['Beasts', b.name, b.id, 'mushrooms.html#' + b.id, b.icon ? `img/items/${{b.icon}}.webp` : '', b.grilledName || ''])
 ).map(e => e.concat([(e[1] + ' ' + e[2]).toLowerCase(), String(e[5]).toLowerCase()]));

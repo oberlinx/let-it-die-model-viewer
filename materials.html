@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LET IT DIE Materials</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LET IT DIE Materials">
+<meta property="og:description" content="Every crafting material in LET IT DIE, with its icon, price and every piece of gear that needs it.">
+<meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="Every crafting material in LET IT DIE, with its icon, price and every piece of gear that needs it.">
+<style>
+  :root {
+    --bg: #0a0a0a; --bg-raised: #131313; --panel: #161616;
+    --panel-border: #333333; --panel-border-bright: #4d4d4d;
+    --text: #e8e8e8; --text-dim: #9a9a9a; --text-faint: #6a6a6a;
+    --accent: #a8291f; --accent-bright: #d6392c; --star: #e2b33c;
+    --stage: radial-gradient(ellipse at 50% 35%, #3a3d44 0%, #1d1f23 70%);
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+  nav.pages { display: flex; gap: 6px; margin-bottom: 18px; }
+  nav.pages a { color: var(--text-dim); text-decoration: none; font-size: 12px; padding: 5px 12px; border: 1px solid var(--panel-border); background: var(--bg-raised); }
+  nav.pages a:hover { color: var(--text); }
+  nav.pages a[aria-current] { color: #fff; border-color: var(--accent); background: var(--accent); }
+  header h1 { font-family: var(--display); font-size: 30px; letter-spacing: 0.5px; margin: 0 0 4px; }
+  header h1 span { color: var(--accent-bright); }
+  header p { margin: 0; color: var(--text-dim); max-width: 70ch; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 22px 0 6px; align-items: center; }
+  .seg { display: flex; align-items: center; gap: 8px; }
+  .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .seg .btns { display: flex; border: 1px solid var(--panel-border); }
+  .seg button { background: var(--bg-raised); color: var(--text-dim); border: 0; border-right: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 6px 11px; cursor: pointer; }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { color: var(--text); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  input[type=search], select { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 6px 8px; }
+  input[type=search] { width: 220px; max-width: 100%; }
+  input[type=search]:focus, select:focus { outline: none; border-color: var(--accent-bright); }
+  label.chk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer; }
+  #count { color: var(--text-faint); font-size: 12px; margin: 10px 0 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--panel-border); padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; min-width: 0; }
+  .card:hover, .card:focus-visible { border-color: var(--accent-bright); outline: none; }
+  .card .shot { background: var(--stage); aspect-ratio: 1; padding: 10px; }
+  /* Premium decals: the game's holographic foil, clipped to the sticker's own shape. --m is the icon, set once the
+     card's own image has loaded. */
+  .foilBox { position: relative; width: 100%; height: 100%; }
+  .foil { position: absolute; inset: 0; pointer-events: none; opacity: 0.15; mix-blend-mode: hard-light;
+    background: url(img/foil.jpg) var(--fx, 50%) var(--fy, 50%) / 240% auto;
+    -webkit-mask: var(--m, none) center / 100% 100% no-repeat; mask: var(--m, none) center / 100% 100% no-repeat; }
+  .foil:not([style*="--m"]) { display: none; }
+  body.nofoil .foil { display: none; }
+  .card img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .card .meta { padding: 7px 9px 8px; border-top: 1px solid var(--panel-border); }
+  .card .name { font-size: 12.5px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+  .stars { color: var(--star); font-size: 11px; letter-spacing: 1px; }
+  .stars i { color: var(--panel-border-bright); font-style: normal; }
+  .tag { display: inline-block; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; padding: 0 5px; border: 1px solid var(--panel-border-bright); color: var(--text-dim); margin-left: 4px; }
+  .tag.prem { border-color: var(--star); color: var(--star); }
+  .empty { grid-column: 1 / -1; color: var(--text-dim); padding: 30px 0; }
+  footer { margin-top: 36px; color: var(--text-faint); font-size: 12px; max-width: 90ch; }
+  footer a { color: var(--text-dim); }
+
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--panel-border-bright); padding: 0; width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 24px); }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.8); }
+  .dlg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-bottom: 1px solid var(--panel-border); }
+  .dlg-head h2 { font-family: var(--display); font-size: 22px; margin: 0; }
+  .dlg-head .nav { margin-left: auto; display: flex; gap: 6px; }
+  .dlg-head .nav button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; padding: 4px 11px; cursor: pointer; }
+  .dlg-head .nav button:hover { border-color: var(--accent-bright); }
+  .dlg-body { padding: 16px; display: grid; grid-template-columns: 220px 1fr; gap: 18px; overflow: auto; }
+  .dlg-body .big { background: var(--stage); border: 1px solid var(--panel-border); padding: 14px; align-self: start; }
+  .dlg-body .big img { width: 100%; display: block; }
+  .dlg-body p.desc { margin: 0 0 12px; font-size: 14px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 13px; }
+  dt { color: var(--text-faint); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  dd a { color: var(--text); }
+  @media (max-width: 620px) {
+    .dlg-body { grid-template-columns: 1fr; }
+    .dlg-body .big { max-width: 200px; }
+    header h1 { font-size: 24px; }
+  }
+  .card .shot.tall { aspect-ratio: 108 / 132; padding: 6px; }
+  .sub { color: var(--text-dim); font-size: 11px; }
+  .grid h2 { grid-column: 1 / -1; font-family: var(--display); font-size: 18px; margin: 14px 0 0; padding-bottom: 6px; border-bottom: 1px solid var(--panel-border); }
+  .dlg-body .big.wide { padding: 0; }
+  .pair { display: flex; gap: 8px; margin-top: 8px; }
+  .pair figure { margin: 0; flex: 1; background: var(--stage); border: 1px solid var(--panel-border); text-align: center; }
+  .pair img { width: 100%; display: block; }
+  .pair figcaption { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; padding: 2px 0 4px; }
+  .tiers { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; }
+  .tiers button { background: var(--bg-raised); color: var(--text-dim); border: 1px solid var(--panel-border); font: inherit; font-size: 11.5px; padding: 3px 8px; cursor: pointer; }
+  .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
+  .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .usedby { max-height: 150px; overflow: auto; }
+  dialog { width: min(1000px, calc(100vw - 24px)); }
+  .upg { margin-top: 14px; max-height: 330px; overflow: auto; border-top: 1px solid var(--panel-border); }
+  .upg table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+  .upg th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 10px 12px 4px 0; position: sticky; top: 0; background: var(--panel); }   /* no gap above the header for rows to show through */
+  .upg td { padding: 2px 12px 2px 0; vertical-align: top; }
+  .upg td:not(:last-child), .upg th { white-space: nowrap; }
+  .upg tr:last-child td { border-top: 1px solid var(--panel-border); }
+  .upg a { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="materials.html" aria-current="page">Materials</a><a href="mushrooms.html">Mushrooms</a></nav>
+  <header>
+    <h1>LET IT DIE <span>Materials</span></h1>
+    <p>Every crafting material and consumable in the game data, with its icon, price and every weapon and armour piece that needs it.</p>
+  </header>
+
+  <div class="bar">
+    <input type="search" id="q" placeholder="Search name or id" aria-label="Search materials">
+    <label class="seg"><span class="lbl">Rarity</span><select id="rarity"><option value="">Any</option></select></label>
+    <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="used">Most used</option></select></label>
+  </div>
+  <div id="count"></div>
+
+  <main class="grid" id="grid"></main>
+
+  <footer>
+    <p>Data comes from the game's <code>master_item</code> table, and the uses from <code>master_part_research</code>: a piece is listed under a material if developing it or any of its upgrade levels needs that material. Skillshrooms are also crafting materials; they are on the Mushrooms page.</p>
+    <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
+  </footer>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-head">
+    <h2 id="d-name"></h2><span id="d-tags"></span>
+    <div class="nav"><button id="d-prev" aria-label="Previous">&larr;</button><button id="d-next" aria-label="Next">&rarr;</button><button id="d-close">Close</button></div>
+  </div>
+  <div class="dlg-body">
+    <div><div class="big"><img id="d-img" alt=""></div><div id="d-extra"></div></div>
+    <div><div class="tiers" id="d-tiers"></div><p class="desc" id="d-desc"></p><dl id="d-info"></dl><div class="upg" id="d-up" hidden></div></div>
+  </div>
+</dialog>
+
+<script src="data/gear.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const num = n => Number(n).toLocaleString('en-US');
+const pic = name => `img/items/${name}.webp`;
+const stars = (n, of) => n > 0 ? `<span class="stars" aria-label="Rarity ${n} of ${of}">${'★'.repeat(n)}<i>${'★'.repeat(Math.max(0, of - n))}</i></span>` : '';
+const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
+const closeDlg = () => { $('dlg').close(); clearHash(); };
+function bindSeg(id, key) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state[key] = b.dataset.v;
+    for (const x of $(id).children) x.setAttribute('aria-pressed', String(x === b));
+    renderGrid();
+  });
+}
+const ALL = GEAR.materials.map((m, i) => Object.assign({ order: i }, m));
+const BY_ID = Object.fromEntries(ALL.map(d => [d.id, d]));
+const PIECE = Object.fromEntries(GEAR.gear.map(g => [g.id, g]));
+// What each material is used for: piece id -> 'craft', 'upgrade' or 'both'.
+const USED = {};
+for (const p of GEAR.gear) for (const how of ['craft', 'upgrade']) for (const [mid] of (p[how] ? p[how].mats : [])) {
+  const u = USED[mid] = USED[mid] || new Map(); u.set(p.id, u.has(p.id) ? 'both' : how);
+}
+const uses = d => USED[d.id] ? USED[d.id].size : 0;
+const state = { q: '', rarity: '', sort: 'game', open: null };
+let list = [];
+function renderGrid() {
+  const q = state.q.trim().toLowerCase();
+  list = ALL.filter(d => (!state.rarity || d.rarity === +state.rarity) && (!q || (d.name + ' ' + d.id + ' ' + (d.desc || '')).toLowerCase().includes(q)));
+  const by = { game: (a, b) => a.order - b.order, name: (a, b) => a.name.localeCompare(b.name), rarity: (a, b) => b.rarity - a.rarity || a.order - b.order, used: (a, b) => uses(b) - uses(a) || a.order - b.order };
+  list.sort(by[state.sort]);
+  $('count').textContent = `${list.length} of ${ALL.length} materials`;
+  $('grid').innerHTML = list.length ? list.map(d => `<button class="card" data-id="${d.id}"><div class="shot tall">${d.icon ? `<img loading="lazy" alt="" src="${pic(d.icon)}">` : ''}</div>
+    <div class="meta"><div class="name">${esc(d.name)}</div><div class="sub">${uses(d) ? `used by ${uses(d)}` : esc(d.type)}</div><div>${stars(d.rarity, 8)}</div></div></button>`).join('')
+    : '<div class="empty">Nothing matches these filters.</div>';
+}
+function openItem(id) {
+  const d = BY_ID[id];
+  if (!d) return;
+  state.open = id;
+  $('d-name').textContent = d.name;
+  $('d-tags').innerHTML = stars(d.rarity, 8) + (d.psOnly ? '<span class="tag">PS only</span>' : '');
+  $('d-img').src = d.icon ? pic(d.icon) : '';
+  $('d-desc').textContent = d.desc || '';
+  $('d-tiers').innerHTML = ''; $('d-extra').innerHTML = '';
+  const rows = [['Id', esc(d.id)], ['Kind', esc(d.type)]];
+  if (d.buy) rows.push(['Shop price', num(d.buy) + ' Kill Coins']);
+  if (d.sell) rows.push(['Sells for', num(d.sell) + ' Kill Coins']);
+  const used = USED[id];
+  if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="gear.html#${pid}">${esc(PIECE[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
+  $('d-info').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  if (!$('dlg').open) $('dlg').showModal();
+  history.replaceState(null, '', '#' + d.id);
+}
+function step(n) {
+  const at = list.findIndex(d => d.id === state.open);
+  if (list.length) openItem(list[(Math.max(at, 0) + n + list.length) % list.length].id);
+}
+for (const r of [...new Set(ALL.map(d => d.rarity).filter(r => r > 0))].sort((a, b) => a - b)) $('rarity').add(new Option(r, r));
+$('q').addEventListener('input', e => { state.q = e.target.value; renderGrid(); });
+$('rarity').addEventListener('change', e => { state.rarity = e.target.value; renderGrid(); });
+$('sort').addEventListener('change', e => { state.sort = e.target.value; renderGrid(); });
+$('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openItem(c.dataset.id); });
+$('d-close').addEventListener('click', closeDlg);
+$('d-prev').addEventListener('click', () => step(-1));
+$('d-next').addEventListener('click', () => step(1));
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });
+$('dlg').addEventListener('close', clearHash);
+$('dlg').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
+window.addEventListener('hashchange', () => openItem(decodeURIComponent(location.hash.slice(1))));
+renderGrid();
+openItem(decodeURIComponent(location.hash.slice(1)));
+</script>
+</body>
+</html>

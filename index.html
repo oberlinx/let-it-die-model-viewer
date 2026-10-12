@@ -133,7 +133,7 @@
 if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.hash);
 </script>
 <div class="wrap">
-  <nav class="pages"><a href="./" aria-current="page">Home</a><a href="models.html">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="mushrooms.html">Mushrooms</a></nav>
+  <nav class="pages"><a href="./" aria-current="page">Home</a><a href="models.html">Fighter Models</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="materials.html">Materials</a><a href="mushrooms.html">Mushrooms</a></nav>
   <header>
     <h1>LET IT DIE <span>Viewer</span></h1>
     <p>What things in the game look like and what the data says about them, taken from the game's own files.</p>
@@ -147,8 +147,10 @@ if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.has
       <div class="strip"><div><img alt="" loading="lazy" src="img/BODY_FEMALE_001_face.webp"></div><div><img alt="" loading="lazy" src="img/BODY_MALE_004_face.webp"></div><div><img alt="" loading="lazy" src="img/BODY_FEMALE_007_face.webp"></div><div><img alt="" loading="lazy" src="img/BODY_MALE_008_face.webp"></div></div></a>
     <a class="section" href="decals.html"><h2>Skill Decals</h2><p>All 368 decals: icon, effect, rarity, where each comes from, normal and premium.</p>
       <div class="strip"><div><img alt="" loading="lazy" src="img/decals/SKL_DEATH_PROOF.webp"></div><div><img alt="" loading="lazy" src="img/decals/SKL_ATK_CHARGED.webp"></div><div><img alt="" loading="lazy" src="img/decals/SKL_MONEYUP_01.webp"></div><div><img alt="" loading="lazy" src="img/decals/SKL_SHOVEL_ABILITY_UP.webp"></div></div></a>
-    <a class="section" href="gear.html"><h2>Gear</h2><p>1,355 weapons and armour pieces plus 110 materials: stats, upgrade lines and crafting costs.</p>
-      <div class="strip"><div><img alt="" loading="lazy" src="img/items/PT_ARM_WP020_001.webp"></div><div><img alt="" loading="lazy" src="img/items/PT_MIL_HEAD_010.webp"></div><div><img alt="" loading="lazy" src="img/items/PT_SPO_TOPS_006.webp"></div><div><img alt="" loading="lazy" src="img/items/ITMT_STONE_TBR_5.webp"></div></div></a>
+    <a class="section" href="gear.html"><h2>Gear</h2><p>1,355 weapons and armour pieces: stats at every upgrade level, upgrade lines and crafting costs.</p>
+      <div class="strip"><div><img alt="" loading="lazy" src="img/items/PT_ARM_WP020_001.webp"></div><div><img alt="" loading="lazy" src="img/items/PT_MIL_HEAD_010.webp"></div><div><img alt="" loading="lazy" src="img/items/PT_SPO_TOPS_006.webp"></div><div><img alt="" loading="lazy" src="img/items/PT_ARM_WP006_002.webp"></div></div></a>
+    <a class="section" href="materials.html"><h2>Materials</h2><p>110 crafting materials and consumables: prices and every piece of gear that needs each one.</p>
+      <div class="strip"><div><img alt="" loading="lazy" src="img/items/ITMT_IRON_4.webp"></div><div><img alt="" loading="lazy" src="img/items/ITMT_STONE_TBR_5.webp"></div><div><img alt="" loading="lazy" src="img/items/ITMT_FIBER_7.webp"></div><div><img alt="" loading="lazy" src="img/items/ITMT_WOOD_1.webp"></div></div></a>
     <a class="section" href="mushrooms.html"><h2>Mushrooms &amp; Beasts</h2><p>63 mushrooms and 24 edible beasts: effects raw and grilled, and the floors they appear on.</p>
       <div class="strip"><div><img alt="" loading="lazy" src="img/items/MSR_016.webp"></div><div><img alt="" loading="lazy" src="img/items/MSR_051.webp"></div><div><img alt="" loading="lazy" src="img/items/BST_FROG.webp"></div><div><img alt="" loading="lazy" src="img/items/BST_TURTLE.webp"></div></div></a>
   </main>
@@ -173,7 +175,7 @@ const INDEX = [].concat(
   GASMASKS.map(m => ['Gas masks', m.name, 'Gas mask ' + m.no, 'models.html#masks', m.icon ? `img/items/${m.icon}.webp` : '', m.female + ' ' + m.male]),
   DECALS.map(d => ['Skill decals', d.name + (d.premium ? ' (Premium)' : ''), d.id, 'decals.html#' + d.id, `img/decals/${d.icon}.webp`, d.desc]),
   GEAR.gear.map(g => ['Gear', g.name, g.id, 'gear.html#' + g.id, g.icon ? `img/items/${g.icon}.webp` : '', [g.type, g.weapon, g.category].join(' ')]),
-  GEAR.materials.map(g => ['Materials', g.name, g.id, 'gear.html#' + g.id, g.icon ? `img/items/${g.icon}.webp` : '', g.desc || '']),
+  GEAR.materials.map(g => ['Materials', g.name, g.id, 'materials.html#' + g.id, g.icon ? `img/items/${g.icon}.webp` : '', g.desc || '']),
   SHROOMS.mushrooms.map(m => ['Mushrooms', m.name, m.id, 'mushrooms.html#' + m.id, m.icon ? `img/items/${m.icon}.webp` : '', [m.raw.effect && m.raw.effect.name, m.grilled && m.grilled.name].join(' ')]),
   SHROOMS.beasts.map(b => ['Beasts', b.name, b.id, 'mushrooms.html#' + b.id, b.icon ? `img/items/${b.icon}.webp` : '', b.grilledName || ''])
 ).map(e => e.concat([(e[1] + ' ' + e[2]).toLowerCase(), String(e[5]).toLowerCase()]));
