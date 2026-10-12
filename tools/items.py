@@ -99,9 +99,14 @@ def part_icon(pid):
     return None
 
 SKIP = {'PT_ARM_WP023_001', 'PT_ARM_WP000_001', 'PT_ARM_Sand'}      # Landmine, Fists, Sand: in the data but not gear you can own
+# PlayStation-only pieces the game data gives stats to but no name in any language. They are listed under the name of
+# the piece they are a variant of, and flagged so the page can say so.
+UNNAMED = {'PT_ARM_WP025_0A4': 'PT_ARM_WP025_004', 'PT_MIL_HEAD_1003': 'PT_MIL_HEAD_1002', 'PT_MIL_TOPS_1003': 'PT_MIL_TOPS_1002', 'PT_MIL_BTM_1003': 'PT_MIL_BTM_1002'}
 gear = []
 for p in parts:
     name = names[p['id']]
+    unnamed = not name and p['id'] in UNNAMED and names.get(UNNAMED[p['id']])
+    if unnamed: name = names[UNNAMED[p['id']]] + ' (unnamed variant)'
     if not name or p['id'] in SKIP: continue
     wp = re.match(r'PT_ARM_WP(\d\d\d)_', p['id'])
     g = dict(id=p['id'], name=name, type=TYPE.get(p['type'], p['type']), category=p['drcat'].replace('DRCAT_', '').title() if p['drcat'] else '',
@@ -123,6 +128,7 @@ for p in parts:
     if p['is_limitbreak']: g['uncap'] = True      # continues an earlier part's +N instead of starting at +0
     if p['nextptid'] and names.get(p['nextptid']): g['next'] = p['nextptid']
     if p['platform']: g['psOnly'] = True
+    if unnamed: g['unnamed'] = names[UNNAMED[p['id']]]
     gear.append(g)
 
 # R&D and upgrade costs (master_part_research). mateN_id are the materials; craft_* is the one-off development cost,

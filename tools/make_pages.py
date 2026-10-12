@@ -160,6 +160,7 @@ page('gear.html', 'Gear',
     </div></div>
     <label class="seg"><span class="lbl">Category</span><select id="cat"><option value="">All</option></select></label>
     <label class="seg"><span class="lbl">Weapon type</span><select id="wtype"><option value="">All</option></select></label>
+    <label class="seg"><span class="lbl">Platform</span><select id="plat"><option value="">All</option><option value="pc">On PC</option><option value="ps">PS only</option></select></label>
     <label class="seg"><span class="lbl">Scales with</span><select id="scl"><option value="">Any</option><option value="str">STR (60% or more)</option><option value="dex">DEX (60% or more)</option><option value="mix">Both, evenly</option></select></label>
     <label class="seg"><span class="lbl">Rarity</span><select id="rarity"><option value="">Any</option></select></label>
     <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="atk">Attack</option><option value="def">Defence</option></select></label>""",
@@ -186,12 +187,12 @@ for (const p of PIECES) { const k = setKey(p.id); if (k) (SETS[k[0]] = SETS[k[0]
 const split = ([s, d]) => [s && s + '% STR', d && d + '% DEX'].filter(Boolean).join(' / ');
 const sclKind = d => !d.scale ? '' : d.scale[0][0] >= 60 ? 'str' : d.scale[0][1] >= 60 ? 'dex' : 'mix';
 const sclText = d => split(d.scale[0]) + d.scale.slice(1).map(x => `; ${x[2]} ${split(x)}`).join('');
-const state = { q: '', kind: '', group: 'lines', cat: '', wtype: '', scl: '', rarity: '', sort: 'game', open: null };
+const state = { q: '', kind: '', group: 'lines', cat: '', wtype: '', scl: '', plat: '', rarity: '', sort: 'game', open: null };
 let list = [];
 const upper = (d, k) => d[k] ? d[k][1] : -1;
 function filtered() {
   const q = state.q.trim().toLowerCase();
-  const hit = ALL.filter(d => (!state.kind || d.type === state.kind) && (!state.cat || d.category === state.cat) && (!state.wtype || d.weapon === state.wtype) && (!state.scl || sclKind(d) === state.scl) &&
+  const hit = ALL.filter(d => (!state.kind || d.type === state.kind) && (!state.cat || d.category === state.cat) && (!state.wtype || d.weapon === state.wtype) && (!state.scl || sclKind(d) === state.scl) && (!state.plat || (state.plat === 'ps') === !!d.psOnly) &&
     (!state.rarity || d.rarity === +state.rarity) && (!q || (d.name + ' ' + d.id).toLowerCase().includes(q)));
   let out = hit;
   if (state.group === 'lines') {            // one entry per line: its first matching tier, carrying the line's best stats for sorting
@@ -214,7 +215,7 @@ function renderGrid() {
   const pieces = state.group === 'lines' ? list.reduce((n, d) => n + d.tiers, 0) : list.length;
   $('count').textContent = state.group === 'lines' ? `${list.length} lines (${pieces} of ${ALL.length} entries)` : `${list.length} of ${ALL.length} entries`;
   $('grid').innerHTML = list.length ? list.map(d => `<button class="card" data-id="${d.id}"><div class="shot tall">${d.icon ? `<img loading="lazy" alt="" src="${pic(d.icon)}">` : ''}</div>
-    <div class="meta"><div class="name">${esc(d.name)}</div><div class="sub">${stat(d)}${d.tiers > 1 ? ` · ${d.tiers} tiers` : ''}</div><div>${stars(d.rarity, 7)}</div></div></button>`).join('')
+    <div class="meta"><div class="name">${esc(d.name)}</div><div class="sub">${stat(d)}${d.tiers > 1 ? ` · ${d.tiers} tiers` : ''}</div><div>${stars(d.rarity, 7)}${d.psOnly ? ' <span class="tag">PS only</span>' : ''}</div></div></button>`).join('')
     : '<div class="empty">Nothing matches these filters.</div>';
 }
 function matLink([id, n]) {
@@ -268,6 +269,7 @@ function openItem(id) {
   const line = LINE_OF[id];
   $('d-tiers').innerHTML = line.length > 1 ? line.map(t => `<button data-tier="${t.id}" aria-pressed="${t.id === id}">${esc(t.name)}</button>`).join('') : '';
   const rows = [['Id', esc(d.id)], ['Kind', esc([d.sub || d.type, d.weapon].filter(Boolean).join(' · '))]];
+  if (d.unnamed) rows.push(['Name', `The game data has no name for this piece. It is a variant of ${esc(d.unnamed)}, so it is listed under that name.`]);
   if (d.category) rows.push(['Category', esc(d.category)]);
   if (d.scale) rows.push(['Scaling', sclText(d)]);
   if (d.dmg) rows.push(['Damage type', d.dmg.map(([n, v]) => d.dmg.length > 1 ? `${v}% ${n}` : n).join(' / ')]);
@@ -301,7 +303,7 @@ opts('rarity', [...new Set(ALL.map(d => d.rarity).filter(r => r > 0))].sort((a, 
 bindSeg('kind', 'kind');
 bindSeg('group', 'group');
 $('q').addEventListener('input', e => { state.q = e.target.value; renderGrid(); });
-for (const [id, key] of [['cat', 'cat'], ['wtype', 'wtype'], ['scl', 'scl'], ['rarity', 'rarity'], ['sort', 'sort']]) $(id).addEventListener('change', e => { state[key] = e.target.value; renderGrid(); });""")
+for (const [id, key] of [['cat', 'cat'], ['wtype', 'wtype'], ['scl', 'scl'], ['plat', 'plat'], ['rarity', 'rarity'], ['sort', 'sort']]) $(id).addEventListener('change', e => { state[key] = e.target.value; renderGrid(); });""")
 
 # ------------------------------------------------------------------ materials
 page('materials.html', 'Materials',
