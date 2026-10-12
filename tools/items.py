@@ -9,7 +9,9 @@ import upk, lzo
 
 OUT = sys.argv[1]
 os.makedirs(OUT, exist_ok=True)
-DB = os.path.abspath(os.path.join(upk.GAME, '..', 'Content', 'masters.db')).replace(os.sep, '/')
+# LID_MASTERS can point at another copy of the database, e.g. an unmodded backup: a modded masters.db can hold
+# extra gear and has its PlayStation-only flags cleared.
+DB = os.path.abspath(os.environ.get('LID_MASTERS') or os.path.join(upk.GAME, '..', 'Content', 'masters.db')).replace(os.sep, '/')
 c = sqlite3.connect('file:%s?mode=ro' % DB, uri=True)
 TEXT = {(s, i): t for s, i, t in c.execute("select sct, id, txt from master_text where lang='int'")}
 FILES = set(os.listdir(upk.GAME))

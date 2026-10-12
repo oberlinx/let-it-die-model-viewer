@@ -14,6 +14,12 @@ the [LET IT DIE save editor](https://oberlinx.github.io/let-it-die-save-editor/)
 Open `index.html`, or serve the folder with GitHub Pages. `index.html`, `gear.html` and `mushrooms.html` are written by
 `tools/make_pages.py`; edit that script rather than those files.
 
+## Which database the data comes from
+
+`tools/items.py` and `tools/decals.py` read the game's `masters.db`. If that file has been modded, point them at an
+unmodded copy with the `LID_MASTERS` environment variable. The data here was built that way: a modded database can
+contain extra gear and has its PlayStation-only flags cleared, which also shifts the stew odds.
+
 ## How the images were made
 
 The pictures in `img/` are renders of the game's own meshes and textures, produced by the scripts in `tools/`:
