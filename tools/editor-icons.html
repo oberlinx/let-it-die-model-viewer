@@ -1,0 +1,52 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>atlas image converter</title>
+<body style="background:#333;color:#ddd;font:12px sans-serif">
+<script>
+// Converts the raw images dumped by items.py (images.json + <name>.bgra / .dxt5) to WebP, POSTing them to serve.py.
+function dxt5(buf, w, h) {
+  const bw = (w + 3) >> 2 << 2, dv = new DataView(buf), out = new Uint8ClampedArray(w * h * 4), a = new Uint8Array(8), c = new Uint8Array(12);
+  let p = 0;
+  for (let by = 0; by < ((h + 3) >> 2 << 2); by += 4) for (let bx = 0; bx < bw; bx += 4) {
+    a[0] = dv.getUint8(p); a[1] = dv.getUint8(p + 1);
+    if (a[0] > a[1]) for (let i = 1; i < 7; i++) a[i + 1] = ((7 - i) * a[0] + i * a[1]) / 7;
+    else { for (let i = 1; i < 5; i++) a[i + 1] = ((5 - i) * a[0] + i * a[1]) / 5; a[6] = 0; a[7] = 255; }
+    const alo = dv.getUint16(p + 2, true) | (dv.getUint8(p + 4) << 16), ahi = dv.getUint16(p + 5, true) | (dv.getUint8(p + 7) << 16);
+    const c0 = dv.getUint16(p + 8, true), c1 = dv.getUint16(p + 10, true); let bits = dv.getUint32(p + 12, true); p += 16;
+    c[0] = (c0 >> 11) * 255 / 31; c[1] = ((c0 >> 5) & 63) * 255 / 63; c[2] = (c0 & 31) * 255 / 31;
+    c[3] = (c1 >> 11) * 255 / 31; c[4] = ((c1 >> 5) & 63) * 255 / 63; c[5] = (c1 & 31) * 255 / 31;
+    for (let k = 0; k < 3; k++) { c[6 + k] = (2 * c[k] + c[3 + k]) / 3; c[9 + k] = (c[k] + 2 * c[3 + k]) / 3; }
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+      const i = (bits & 3) * 3, k = y * 4 + x; bits >>>= 2;
+      if (bx + x >= w || by + y >= h) continue;
+      const o = ((by + y) * w + bx + x) * 4;
+      out[o] = c[i]; out[o + 1] = c[i + 1]; out[o + 2] = c[i + 2];
+      out[o + 3] = a[k < 8 ? (alo >> (3 * k)) & 7 : (ahi >> (3 * (k - 8))) & 7];
+    }
+  }
+  return out;
+}
+async function image(name, info) {
+  const buf = await (await fetch(name + '.' + info.fmt)).arrayBuffer();
+  let px;
+  if (info.fmt === 'dxt5') px = dxt5(buf, info.w, info.h);
+  else { px = new Uint8ClampedArray(buf.slice(0)); for (let i = 0; i < px.length; i += 4) { const b = px[i]; px[i] = px[i + 2]; px[i + 2] = b; } }
+  const c = document.createElement('canvas'); c.width = info.w; c.height = info.h;
+  c.getContext('2d').putImageData(new ImageData(px, info.w, info.h), 0, 0);
+  return c;
+}
+// Builds the editor's sprite sheets from atlas_spec.json: every icon scaled into a cell, left to right, top to bottom.
+async function run(q, only) {
+  const all = await (await fetch('images.json')).json(), spec = await (await fetch('atlas_spec.json')).json(), [cw, ch] = spec.cell;
+  for (const [sheet, { cols, names }] of Object.entries(spec.sheets)) {
+    if (only && sheet !== only) continue;
+    const a = document.createElement('canvas'); a.width = cols * cw; a.height = Math.ceil(names.length / cols) * ch;
+    const x = a.getContext('2d'); x.imageSmoothingQuality = 'high';
+    let i = 0;
+    for (const n of names) { x.drawImage(await image(n, all[n]), (i % cols) * cw, Math.floor(i / cols) * ch, cw, ch); i++; }
+    await fetch('/save/atlas_' + sheet + '.webp', { method: 'POST', body: await new Promise(r => a.toBlob(r, 'image/webp', q)) });
+  }
+  await fetch('/save/atlas_done.png', { method: 'POST', body: 'x' });
+  return 'done';
+}
+</script>
