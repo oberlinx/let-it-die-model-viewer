@@ -1,0 +1,54 @@
+name: Data correction
+description: A number, name or picture on the site doesn't match the game
+labels: ["data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for checking the site against the game. The more exact you are, the faster it gets fixed.
+  - type: dropdown
+    id: page
+    attributes:
+      label: Page
+      options:
+        - Fighter Models
+        - Skill Decals
+        - Gear
+        - Materials
+        - Mushrooms & Beasts
+        - Home / search
+    validations:
+      required: true
+  - type: input
+    id: entry
+    attributes:
+      label: Which entry?
+      description: Its name, and its id if you can (shown in the entry's details).
+      placeholder: Jungle Machete, PT_ARM_WP006_005
+    validations:
+      required: true
+  - type: textarea
+    id: site
+    attributes:
+      label: What does the site show?
+    validations:
+      required: true
+  - type: textarea
+    id: game
+    attributes:
+      label: What does the game show?
+      description: A screenshot helps a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything that could change the number in your game?
+      description: Decals on the fighter, the fighter's grade and level, mushrooms, the weapon's upgrade level.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: My game is not modded (or I have said above how it is modded)
+          required: true

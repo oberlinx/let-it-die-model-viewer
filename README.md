@@ -8,7 +8,7 @@ the [LET IT DIE save editor](https://oberlinx.github.io/let-it-die-save-editor/)
 | `index.html` | Home: the four sections and one search box across all of them |
 | `models.html` | The 16 fighter bodies (photos, rotatable 3D view in three poses, voices, taunts, side-by-side compare) and the 8 gas masks |
 | `decals.html` | All 368 skill decals, a normal and premium pair sharing one card |
-| `gear.html` | Weapons and armour: stats at every upgrade level, upgrade lines, armour sets, development and upgrade costs |
+| `gear.html` | Weapons and armour: stats at every upgrade level, STR/DEX scaling and damage types, upgrade lines, armour sets, development and upgrade costs |
 | `materials.html` | Crafting materials and consumables: prices and every piece of gear that needs each one |
 | `mushrooms.html` | Mushrooms and edible beasts: effects raw and grilled, and the floors they spawn on |
 
@@ -55,5 +55,11 @@ For the decal catalogue:
   pick up the posed vertices automatically.
 
 Models are shown in the game's idle stance and lit outside the game engine, so colours are close to but not identical to in-game.
+
+## Contributing and license
+
+Found a number that doesn't match your game, or a page that doesn't work? Open an issue; there is a form for each. See [CONTRIBUTING.md](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md) and the [Security Policy](SECURITY.md).
+
+The site's code and the tools in `tools/` are released under the [GNU GPL v3](LICENSE). The game's art, audio and data shown here are not covered by that licence.
 
 Unofficial fan project. LET IT DIE and its character art belong to their respective rights holders.

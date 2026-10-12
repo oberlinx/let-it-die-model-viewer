@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem
+    url: https://github.com/oberlinx/let-it-die-model-viewer/security/advisories/new
+    about: Report a vulnerability privately instead of opening a public issue.
+  - name: Problem with the save editor
+    url: https://github.com/oberlinx/let-it-die-save-editor/issues
+    about: The save editor is a separate project. Report its problems there.

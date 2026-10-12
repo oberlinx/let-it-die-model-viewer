@@ -1,0 +1,55 @@
+name: Bug report
+description: A page doesn't load, display or behave properly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If the page works but a number or name is wrong, please use the **Data correction** form instead.
+  - type: dropdown
+    id: page
+    attributes:
+      label: Page
+      options:
+        - Home / search
+        - Fighter Models
+        - Skill Decals
+        - Gear
+        - Materials
+        - Mushrooms & Beasts
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Chrome 130 on Windows, Safari on iPhone ...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What did you do?
+      description: What you opened or clicked, in order. A link to the entry helps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, and what happened instead?
+      description: Paste any error message. A screenshot helps.
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem is it?
+      options:
+        - The 3D view
+        - A picture is missing or wrong
+        - Sound doesn't play
+        - Layout or scrolling
+        - Search or filters
+        - Something else
+    validations:
+      required: true

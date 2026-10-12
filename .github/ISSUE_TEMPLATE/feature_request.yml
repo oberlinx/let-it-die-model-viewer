@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest something to add or improve
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to find out or do?
+      description: The question you had when you came to the site.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: What you would like the site to show or do.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: This is about the unmodded game
