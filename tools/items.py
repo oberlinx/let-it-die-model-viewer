@@ -120,6 +120,34 @@ for r in rows('select distinct flrid, type, grp from master_floor_drop_gen where
     if r['type'] in BP_KIND and r['flrid'] in _flr_no:
         _grp_floors.setdefault(r['grp'], {}).setdefault(BP_KIND[r['type']], set()).add(_flr_no[r['flrid']])
 _bp_grp = {r['itemid']: r['grp'] for r in rows("select itemid, grp from master_item where itemtype = 'ITTP_RMAP'")}
+# Odds. Each row of master_floor_drop_gen is a weight: on that floor and area, a container or enemy of that type gives
+# something from group <grp> with chance freq / (sum of freq over that type's rows there). The data does not say how one
+# blueprint is picked inside a group, so the group's chance is split evenly between its members.
+_grp_size = {}
+for r in rows('select grp, count(*) as n from master_item where grp >= 50 group by grp'): _grp_size[r['grp']] = r['n']
+_tot = {}
+_drop_rows = rows('select flrid, areaid, type, grp, freq from master_floor_drop_gen where freq > 0')
+for r in _drop_rows: _tot[(r['flrid'], r['areaid'], r['type'])] = _tot.get((r['flrid'], r['areaid'], r['type']), 0) + r['freq']
+_grp_odds = {}      # grp -> type -> floor number -> [lowest %, highest %] over that floor's areas
+for r in _drop_rows:
+    if r['grp'] >= 50 and r['type'] in BP_KIND and r['flrid'] in _flr_no:
+        pct = 100.0 * r['freq'] / _tot[(r['flrid'], r['areaid'], r['type'])] / _grp_size.get(r['grp'], 1)
+        d = _grp_odds.setdefault(r['grp'], {}).setdefault(r['type'], {})
+        lo, hi = d.get(_flr_no[r['flrid']], (pct, pct)); d[_flr_no[r['flrid']]] = (min(lo, pct), max(hi, pct))
+def _pool_odds(sql):
+    """{blueprint item: {pool: %}} for reward pools where each row is (pool, weight, rwdid)."""
+    rs = rows(sql); tot = {}; out = {}
+    for r in rs: tot[r['pool']] = tot.get(r['pool'], 0) + r['freq']
+    for r in rs:
+        if r['rwdid'] in _rwd_all:
+            it = _rwd_all[r['rwdid']]; it = it[:-1] if it.endswith('U') else it
+            out.setdefault(it, {}); out[it][r['pool']] = out[it].get(r['pool'], 0) + 100.0 * r['freq'] / tot[r['pool']]
+    return out
+_rwd_all = {r['rwdid']: r['val0'] for r in rows("select rwdid, val0 from master_reward where val0 like 'ITMP_%'")}
+_box_odds = _pool_odds('select rarity as pool, freq, rwdid from master_deathbox_content_gen where freq > 0')
+_bag_odds = _pool_odds("select rarity as pool, freq, rwdid from master_mysterybag_content_gen_odds where odds_id = 'offline' and freq > 0")
+def _pct(x):
+    return round(x, 2 if x < 1 else 1)
 _bp_other = {}
 def _src(item, text):
     if item.endswith('U'): item = item[:-1]
@@ -133,9 +161,13 @@ for r in rows('select qid, name, first_rwd, rwd from master_quest'):
     for k in ('first_rwd', 'rwd'):
         if r[k] in _rwd: _src(_rwd[r[k]], 'Quest reward: ' + clean(re.sub(r'#\d', '', tx(r['name']) or r['qid'])))
 for r in rows('select rarity, rwdid from master_deathbox_content_gen where freq > 0'):
-    if r['rwdid'] in _rwd: _src(_rwd[r['rwdid']], 'Reward box (%s)' % r['rarity'].split('_')[0].lower())
+    if r['rwdid'] in _rwd:
+        it = _rwd[r['rwdid']]; it = it[:-1] if it.endswith('U') else it
+        _src(it, 'Reward box (%s): %g%% per box' % (r['rarity'].replace('_', ' ').lower(), _pct(_box_odds[it][r['rarity']])))
 for r in rows("select rarity, rwdid from master_mysterybag_content_gen_odds where odds_id = 'offline' and freq > 0"):
-    if r['rwdid'] in _rwd: _src(_rwd[r['rwdid']], 'Lost Bag (%s)' % r['rarity'].lower())
+    if r['rwdid'] in _rwd:
+        it = _rwd[r['rwdid']]; it = it[:-1] if it.endswith('U') else it
+        _src(it, 'Lost Bag (%s): %g%% per bag' % (r['rarity'].lower(), _pct(_bag_odds[it][r['rarity']])))
 for r in rows('select rwdid from master_stamp_bonus'):
     if r['rwdid'] in _rwd: _src(_rwd[r['rwdid']], 'Floor stamp completion bonus')
 for r in rows("select [group] as g, itemid from master_tdm_season_reward where itemid like 'ITMP_%'"):
@@ -155,6 +187,17 @@ def blueprint(pid):
     for it in (item, item + 'U'):
         for kind, nums in _grp_floors.get(_bp_grp.get(it, 0), {}).items(): fl.setdefault(kind, set()).update(nums)
     if fl: out['floors'] = {k: ranges(sorted(v)) for k, v in fl.items()}
+    # loot: one entry per container or enemy type, [type, floors, chance in the tower, chance in Tengoku], chances as [low %, high %]
+    loot = {}
+    for it in (item, item + 'U'):
+        for typ, per in _grp_odds.get(_bp_grp.get(it, 0), {}).items():
+            for no, (lo, hi) in per.items():
+                d = loot.setdefault(typ, {}); a, b = d.get(no, (0, 0)); d[no] = (a + lo, b + hi)
+    def span(per, keep):
+        v = [x for no, x in per.items() if keep(no)]
+        return [_pct(min(x[0] for x in v)), _pct(max(x[1] for x in v))] if v else None
+    order = list(BP_KIND)
+    if loot: out['loot'] = [[typ[8:], ranges(sorted(per)), span(per, lambda n: n <= 50), span(per, lambda n: n > 50)] for typ, per in sorted(loot.items(), key=lambda kv: order.index(kv[0]))]
     other = (['Known from the start'] if pid in _initial else []) + _bp_other.get(item, [])
     if other: out['other'] = other
     return out

@@ -165,7 +165,7 @@ page('gear.html', 'Gear',
     <label class="seg"><span class="lbl">Scales with</span><select id="scl"><option value="">Any</option><option value="str">STR (60% or more)</option><option value="dex">DEX (60% or more)</option><option value="mix">Both, evenly</option></select></label>
     <label class="seg"><span class="lbl">Rarity</span><select id="rarity"><option value="">Any</option></select></label>
     <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="atk">Attack</option><option value="def">Defence</option></select></label>""",
-     "Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. Scaling comes from <code>master_atk_scale</code>, where each attack says how much of its damage follows STR and how much DEX, and damage types from <code>master_part_atkattr</code>. Blueprint sources come from <code>master_floor_drop_gen</code> (which floors' treasure boxes, Treasure Tubers and Haters can give each blueprint) and from the shop, quest and reward tables; they say where a blueprint can turn up, not how likely it is. Crafting materials have their own page. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal \"D\" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. The per-level attack values match the game for the pieces checked (Jungle Machete, 32 at +4; Buzzsaw Masher +, 2,499 at +12 and 2,574 at +13). Upgrade costs per level are worked out from the stored base amounts and growth factors, and match the game for the step checked (Buzzsaw Masher + from +12 to +13: 54,588 SPLithium and the same five materials). The stat requirement shown is before any decal that lowers requirements. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. \"Overlimit\" marks the uncapped tier of a line, which the game itself gives the same name as the tier before it. Blueprints are left out because each one maps to a piece already listed.",
+     "Data comes from the game's <code>master_part</code>, <code>master_item</code> and <code>master_part_research</code> tables and the icons from its UI packages. Scaling comes from <code>master_atk_scale</code>, where each attack says how much of its damage follows STR and how much DEX, and damage types from <code>master_part_atkattr</code>. Blueprint sources come from <code>master_floor_drop_gen</code> (which floors' treasure boxes, Treasure Tubers and Haters can give each blueprint) and from the shop, quest and reward tables; the percentages are the chance that one box, Treasure Tuber or Hater of that kind gives this blueprint, shown as a range where it differs between floors or areas. The game data sets odds for groups of blueprints, so a group's chance is split evenly between its members here. Crafting materials have their own page. A tier with no icon of its own borrows the one from the tier below, and gold variants use the plain version's icon; the three Jackal \"D\" weapons have none. The table in each piece's detail view gives its attack or defence, durability and stat requirement at every upgrade level, and the SPLithium and materials needed to reach that level (SPL = SPLithium). The game stores a second, lower attack or defence number for each piece whose meaning is unclear; it is not shown. The per-level attack values match the game for the pieces checked (Jungle Machete, 32 at +4; Buzzsaw Masher +, 2,499 at +12 and 2,574 at +13). Upgrade costs per level are worked out from the stored base amounts and growth factors, and match the game for the step checked (Buzzsaw Masher + from +12 to +13: 54,588 SPLithium and the same five materials). The stat requirement shown is before any decal that lowers requirements. The data also holds a waiting time per upgrade, which the game no longer applies, so it is not shown. \"Overlimit\" marks the uncapped tier of a line, which the game itself gives the same name as the tier before it. Blueprints are left out because each one maps to a piece already listed.",
      DIALOG % '', 'gear.js', r"""const PIECES = GEAR.gear.map((g, i) => Object.assign({ order: i }, g));
 const ALL = PIECES;
 const MAT_NAME = Object.assign({}, GEAR.names, Object.fromEntries(GEAR.materials.map(m => [m.id, m.name])));     // materials have their own page
@@ -186,20 +186,24 @@ const setKey = id => { const m = /^PT_([A-Z]+)_(HEAD|TOPS|BTM)_(.+)$/.exec(id); 
 for (const p of PIECES) { const k = setKey(p.id); if (k) (SETS[k[0]] = SETS[k[0]] || {})[k[1]] = p; }
 // Blueprints: d.bp.floors is {kind: [[from, to], ...]} for random loot, d.bp.other a list of fixed sources.
 const TOWER = 50;                 // floors above this are Tengoku
-const BP_KIND = { box: 'Treasure boxes', tuber: 'Treasure Tubers', hater: 'Haters', boss: 'Mid-bosses' };
 const bpOn = (d, n) => !!(d.bp && d.bp.floors) && Object.values(d.bp.floors).some(rs => rs.some(([a, b]) => a <= n && n <= b));
-function bpFloors(rs) {
-  const parts = [], low = rs.filter(([a]) => a <= TOWER).map(([a, b]) => a === Math.min(b, TOWER) ? String(a) : `${a}–${Math.min(b, TOWER)}`);
-  if (low.length) parts.push('floors ' + low.join(', '));
-  const high = [];
-  for (const [a, b] of rs) for (let n = Math.max(a, TOWER + 1); n <= b; n++) high.push(n);
-  if (high.length === 401) parts.push('all of Tengoku');
-  else if (high.length) parts.push(`Tengoku, ${high.length} of its 401 floors` + (high.every(n => n % 5 === 0) ? ' (all multiples of 5)' : ''));
-  return parts.join('; ');
+// One line per container or enemy type: [type, floors, chance in the tower, chance in Tengoku], chances as [low %, high %].
+const BP_TYPE = { TRBOX_S: ['Small treasure box', 'box'], TRBOX_M: ['Medium treasure box', 'box'], TRBOX_L: ['Large treasure box', 'box'],
+  SPM: ['Special treasure box (medium)', 'box'], SPL: ['Special treasure box (large)', 'box'], SPXL: ['Special treasure box (extra large)', 'box'],
+  TRBOX_SPXL_RARE: ['Rare special treasure box', 'box'], TRZAKO: ['Treasure Tuber', 'Tuber'], HATER_L: ['Hater, large drop', 'Hater'], HATER_M: ['Hater, medium drop', 'Hater'] };
+const odds = (o, unit) => o ? `, ${o[0] === o[1] ? o[0] : o[0] + '–' + o[1]}% per ${unit}` : '';
+function bpLoot([type, rs, low, high]) {
+  const [label, unit] = BP_TYPE[type] || [type, 'drop'], parts = [];
+  const tower = rs.filter(([a]) => a <= TOWER).map(([a, b]) => a === Math.min(b, TOWER) ? String(a) : `${a}–${Math.min(b, TOWER)}`);
+  if (tower.length) parts.push((tower.length === 1 && !tower[0].includes('–') ? 'floor ' : 'floors ') + tower.join(', ') + odds(low, unit));
+  const up = [];
+  for (const [a, b] of rs) for (let n = Math.max(a, TOWER + 1); n <= b; n++) up.push(n);
+  if (up.length) parts.push((up.length === 401 ? 'all of Tengoku' : `Tengoku, ${up.length} of its 401 floors` + (up.every(n => n % 5 === 0) ? ' (all multiples of 5)' : '')) + odds(high, unit));
+  return `${label}: ${parts.join('; ')}`;
 }
 function bpHtml(d, prev) {
   if (!d.bp) return prev ? `None needed: made by upgrading <a href="#${prev.id}">${esc(prev.name)}</a>` : 'None in the game data';
-  const lines = Object.keys(BP_KIND).filter(k => d.bp.floors && d.bp.floors[k]).map(k => `${BP_KIND[k]}: ${bpFloors(d.bp.floors[k])}`).concat((d.bp.other || []).map(esc));
+  const lines = (d.bp.loot || []).map(bpLoot).concat((d.bp.other || []).map(esc));
   if (!lines.length) return prev ? `None needed: made by upgrading <a href="#${prev.id}">${esc(prev.name)}</a>` : 'Exists, but the game data gives it no source';
   return lines.join('<br>');
 }
