@@ -8,7 +8,7 @@ the [LET IT DIE save editor](https://oberlinx.github.io/let-it-die-save-editor/)
 | `index.html` | Home: the four sections and one search box across all of them |
 | `models.html` | The 16 fighter bodies (photos, rotatable 3D view in three poses, voices, taunts, side-by-side compare) and the 8 gas masks |
 | `decals.html` | All 368 skill decals, a normal and premium pair sharing one card |
-| `gear.html` | Weapons and armour: stats at every upgrade level, STR/DEX scaling and damage types, upgrade lines, armour sets, development and upgrade costs |
+| `gear.html` | Weapons and armour: stats at every upgrade level, STR/DEX scaling and damage types, blueprint sources, upgrade lines, armour sets, development and upgrade costs |
 | `materials.html` | Crafting materials and consumables: prices and every piece of gear that needs each one |
 | `mushrooms.html` | Mushrooms and edible beasts: effects raw and grilled, and the floors they spawn on |
 

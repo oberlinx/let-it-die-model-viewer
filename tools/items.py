@@ -99,6 +99,66 @@ def part_icon(pid):
     return None
 
 SKIP = {'PT_ARM_WP023_001', 'PT_ARM_WP000_001', 'PT_ARM_Sand'}      # Landmine, Fists, Sand: in the data but not gear you can own
+def ranges(nums):
+    """[1, 2, 3, 7, 9, 10] -> [[1, 3], [7, 7], [9, 10]]"""
+    out = []
+    for n in nums:
+        if out and n == out[-1][1] + 1: out[-1][1] = n
+        else: out.append([n, n])
+    return out
+
+# ---- where blueprints come from ----
+# A piece's blueprint is the item ITMP_<rest of the part id>; the same id with a U on the end is its unrevealed form.
+# Blueprints with a group number (master_item.grp) are random loot: master_floor_drop_gen lists, floor by floor, which
+# groups each kind of container or enemy can give. Everything else is a fixed source (shops, quests, rewards).
+BP_KIND = {'PTGENTP_TRBOX_S': 'box', 'PTGENTP_TRBOX_M': 'box', 'PTGENTP_TRBOX_L': 'box', 'PTGENTP_SPM': 'box', 'PTGENTP_SPL': 'box',
+           'PTGENTP_SPXL': 'box', 'PTGENTP_TRBOX_SPXL_RARE': 'box', 'PTGENTP_TRZAKO': 'tuber', 'PTGENTP_HATER_L': 'hater',
+           'PTGENTP_HATER_M': 'hater', 'PTGENTP_MBOSS1': 'boss', 'PTGENTP_MBOSS2': 'boss', 'PTGENTP_MBOSS3': 'boss', 'PTGENTP_MBOSS4': 'boss'}
+_flr_no = {r['id']: r['no'] for r in rows('select distinct id, no from master_floor where no > 0')}
+_grp_floors = {}
+for r in rows('select distinct flrid, type, grp from master_floor_drop_gen where freq > 0 and grp >= 50'):
+    if r['type'] in BP_KIND and r['flrid'] in _flr_no:
+        _grp_floors.setdefault(r['grp'], {}).setdefault(BP_KIND[r['type']], set()).add(_flr_no[r['flrid']])
+_bp_grp = {r['itemid']: r['grp'] for r in rows("select itemid, grp from master_item where itemtype = 'ITTP_RMAP'")}
+_bp_other = {}
+def _src(item, text):
+    if item.endswith('U'): item = item[:-1]
+    if text not in _bp_other.setdefault(item, []): _bp_other[item].append(text)
+_zone = {r['stgid']: r['stgpfx'] for r in rows('select distinct stgid, stgpfx from master_floor')}
+for r in rows("select itemid from master_shop_product_item where itemid like 'ITMP_%'"): _src(r['itemid'], 'Sold in shops')
+for r in rows("select distinct lineup_id, type_id from master_automaticshop_lineup where type_id like 'ITMP_%'"):
+    _src(r['type_id'], 'Hernia Vending Machine' + {'COMMON': '', 'RE': ', for Recycle Points'}.get(r['lineup_id'], ', daily lineup'))
+_rwd = {r['rwdid']: r['val0'] for r in rows("select rwdid, val0 from master_reward where val0 like 'ITMP_%'")}
+for r in rows('select qid, name, first_rwd, rwd from master_quest'):
+    for k in ('first_rwd', 'rwd'):
+        if r[k] in _rwd: _src(_rwd[r[k]], 'Quest reward: ' + clean(re.sub(r'#\d', '', tx(r['name']) or r['qid'])))
+for r in rows('select rarity, rwdid from master_deathbox_content_gen where freq > 0'):
+    if r['rwdid'] in _rwd: _src(_rwd[r['rwdid']], 'Reward box (%s)' % r['rarity'].split('_')[0].lower())
+for r in rows("select rarity, rwdid from master_mysterybag_content_gen_odds where odds_id = 'offline' and freq > 0"):
+    if r['rwdid'] in _rwd: _src(_rwd[r['rwdid']], 'Lost Bag (%s)' % r['rarity'].lower())
+for r in rows('select rwdid from master_stamp_bonus'):
+    if r['rwdid'] in _rwd: _src(_rwd[r['rwdid']], 'Floor stamp completion bonus')
+for r in rows("select [group] as g, itemid from master_tdm_season_reward where itemid like 'ITMP_%'"):
+    _src(r['itemid'], 'Tokyo Death Metro season reward (%s)' % r['g'].lower())
+for r in rows("select distinct itemid from master_model_drop where freq > 0 and itemid like 'ITMP_%'"): _src(r['itemid'], 'Dropped by named Haters')
+for r in rows("select stgid, rwd from master_stage_trbox where rwd like 'ITMP_%'"): _src(r['rwd'], 'A fixed treasure box in %s' % _zone.get(r['stgid'], r['stgid']))
+for r in rows("select value from master_steam_product where value like 'ITMP_%'"): _src(r['value'], 'Steam DLC')
+for r in rows("select value from master_ps4_product where value like 'ITMP_%'"): _src(r['value'], 'PlayStation Store item')
+_initial = {r['ptid'] for r in rows('select ptid from master_part_research where is_initial = 1')}
+
+def blueprint(pid):
+    """Where a part's blueprint comes from: {'floors': {kind: [[from, to], ...]}, 'other': [text, ...]}, or None if it has none."""
+    item = 'ITMP_' + pid[3:]
+    if item not in _bp_grp and pid not in _initial: return None
+    out = {}
+    fl = {}
+    for it in (item, item + 'U'):
+        for kind, nums in _grp_floors.get(_bp_grp.get(it, 0), {}).items(): fl.setdefault(kind, set()).update(nums)
+    if fl: out['floors'] = {k: ranges(sorted(v)) for k, v in fl.items()}
+    other = (['Known from the start'] if pid in _initial else []) + _bp_other.get(item, [])
+    if other: out['other'] = other
+    return out
+
 # PlayStation-only pieces the game data gives stats to but no name in any language. They are listed under the name of
 # the piece they are a variant of, and flagged so the page can say so.
 UNNAMED = {'PT_ARM_WP025_0A4': 'PT_ARM_WP025_004', 'PT_MIL_HEAD_1003': 'PT_MIL_HEAD_1002', 'PT_MIL_TOPS_1003': 'PT_MIL_TOPS_1002', 'PT_MIL_BTM_1003': 'PT_MIL_BTM_1002'}
@@ -129,6 +189,8 @@ for p in parts:
     if p['nextptid'] and names.get(p['nextptid']): g['next'] = p['nextptid']
     if p['platform']: g['psOnly'] = True
     if unnamed: g['unnamed'] = names[UNNAMED[p['id']]]
+    bp = blueprint(p['id'])
+    if bp is not None: g['bp'] = bp
     gear.append(g)
 
 # R&D and upgrade costs (master_part_research). mateN_id are the materials; craft_* is the one-off development cost,
@@ -192,14 +254,6 @@ def spawn_floors(gen_col, gen_table, id_col):
     for r in rows('select distinct no, %s as gen from master_floor where no > 0' % gen_col):
         for thing in members.get(r['gen'], ()): out.setdefault(thing, set()).add(r['no'])
     return {k: sorted(v) for k, v in out.items()}
-
-def ranges(nums):
-    """[1, 2, 3, 7, 9, 10] -> [[1, 3], [7, 7], [9, 10]]"""
-    out = []
-    for n in nums:
-        if out and n == out[-1][1] + 1: out[-1][1] = n
-        else: out.append([n, n])
-    return out
 
 def placed_zones(stage_table, gen_table, id_col):
     """{thing id: zone names} for things placed at fixed points of a zone (master_stage_*), directly or through a spawn list."""
