@@ -37,8 +37,9 @@ async function image(name, info) {
 }
 // Builds the editor's sprite sheets from atlas_spec.json: every icon scaled into a cell, left to right, top to bottom.
 async function run(q, only) {
-  const all = await (await fetch('images.json')).json(), spec = await (await fetch('atlas_spec.json')).json(), [cw, ch] = spec.cell;
-  for (const [sheet, { cols, names }] of Object.entries(spec.sheets)) {
+  const all = await (await fetch('images.json')).json(), spec = await (await fetch('atlas_spec.json')).json();
+  for (const [sheet, { cols, names, cell }] of Object.entries(spec.sheets)) {
+    const [cw, ch] = cell || spec.cell;
     if (only && sheet !== only) continue;
     const a = document.createElement('canvas'); a.width = cols * cw; a.height = Math.ceil(names.length / cols) * ch;
     const x = a.getContext('2d'); x.imageSmoothingQuality = 'high';

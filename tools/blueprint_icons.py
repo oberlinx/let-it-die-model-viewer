@@ -1,11 +1,13 @@
 """Dump icons that are not tied to an item id, raw into <out-dir>, adding them to images.json: the blueprint icons
 (revealed RMAP_1..3, unrevealed UN_RMAP_1..3) and the currencies (Kill Coins, SPLithium, Bloodnium, Death Metal, Express passes)."""
-import os, sys, json
+import os, sys, json, re
 import upk, lzo
 OUT = sys.argv[1]
+# weapon type (mastery) icons: one package per type, UI_Icon_PTARMTP_<nn>_SF.upk
+MASTERY = sorted(re.match(r'UI_Icon_(PTARMTP_\d+)_SF\.upk', f).group(1) for f in os.listdir(upk.GAME) if re.match(r'UI_Icon_PTARMTP_\d+_SF\.upk', f))
 images = json.load(open(os.path.join(OUT, 'images.json')))
 _tfc = {}
-for name in ['RMAP_1', 'RMAP_2', 'RMAP_3', 'UN_RMAP_1', 'UN_RMAP_2', 'UN_RMAP_3', 'Money_1', 'Spirit_1', 'Blood_1', 'DMetal_1', 'VIPticket_1', 'VIPticket_2']:
+for name in ['RMAP_1', 'RMAP_2', 'RMAP_3', 'UN_RMAP_1', 'UN_RMAP_2', 'UN_RMAP_3', 'Money_1', 'Spirit_1', 'Blood_1', 'DMetal_1', 'VIPticket_1', 'VIPticket_2'] + MASTERY:
     p = upk.Package('UI_Icon_%s_SF.upk' % name)
     tex = [e for e in p.exports if p.clsname(e) == 'Texture2D']
     print(name, [e['name'] for e in tex])
