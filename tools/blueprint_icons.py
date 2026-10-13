@@ -1,10 +1,11 @@
-"""Dump the six blueprint icons (revealed RMAP_1..3, unrevealed UN_RMAP_1..3) raw into <out-dir>, adding them to images.json."""
+"""Dump icons that are not tied to an item id, raw into <out-dir>, adding them to images.json: the blueprint icons
+(revealed RMAP_1..3, unrevealed UN_RMAP_1..3) and the currencies (Kill Coins, SPLithium, Bloodnium, Death Metal, Express passes)."""
 import os, sys, json
 import upk, lzo
 OUT = sys.argv[1]
 images = json.load(open(os.path.join(OUT, 'images.json')))
 _tfc = {}
-for name in ['RMAP_1', 'RMAP_2', 'RMAP_3', 'UN_RMAP_1', 'UN_RMAP_2', 'UN_RMAP_3']:
+for name in ['RMAP_1', 'RMAP_2', 'RMAP_3', 'UN_RMAP_1', 'UN_RMAP_2', 'UN_RMAP_3', 'Money_1', 'Spirit_1', 'Blood_1', 'DMetal_1', 'VIPticket_1', 'VIPticket_2']:
     p = upk.Package('UI_Icon_%s_SF.upk' % name)
     tex = [e for e in p.exports if p.clsname(e) == 'Texture2D']
     print(name, [e['name'] for e in tex])

@@ -14,7 +14,7 @@ def uniq(seq):
         if x and x in images and x not in out: out.append(x)
     return out
 items = uniq([m['icon'] for m in gear['materials']] + [x.get(k) for x in msr['mushrooms'] + msr['beasts'] for k in ('icon', 'iconGrilled')] +
-             ['RMAP_1', 'RMAP_2', 'RMAP_3', 'UN_RMAP_1', 'UN_RMAP_2', 'UN_RMAP_3'])
+             ['RMAP_1', 'RMAP_2', 'RMAP_3', 'UN_RMAP_1', 'UN_RMAP_2', 'UN_RMAP_3', 'Money_1', 'Spirit_1', 'Blood_1', 'DMetal_1', 'VIPticket_1', 'VIPticket_2'])
 weapons = uniq(p['icon'] for p in gear['gear'] if p['type'] == 'Weapon')
 armor = uniq(p['icon'] for p in gear['gear'] if p['type'] != 'Weapon')
 alias = {p['id']: p['icon'] for p in gear['gear'] if p['icon'] and p['icon'] != p['id']}
