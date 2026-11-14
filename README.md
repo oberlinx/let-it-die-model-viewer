@@ -5,15 +5,16 @@ the [LET IT DIE save editor](https://oberlinx.github.io/let-it-die-save-editor/)
 
 | Page | What it shows |
 |---|---|
-| `index.html` | Home: the four sections and one search box across all of them |
+| `index.html` | Home: the sections and one search box across all of them |
 | `models.html` | The 16 fighter bodies (photos, rotatable 3D view in three poses, voices, taunts, side-by-side compare) and the 8 gas masks |
+| `jackals.html` | Jackals X, Y and Z in all 15 tiers: stats, gear, drop odds, damage taken per attack, mushrooms thrown, voice cast and the in-game mails about them; photos and a rotatable 3D view of the standard and red-and-black (D) models |
 | `decals.html` | All 368 skill decals, a normal and premium pair sharing one card |
 | `gear.html` | Weapons and armour: stats at every upgrade level, STR/DEX scaling and damage types, blueprint sources, upgrade lines, armour sets, development and upgrade costs |
 | `materials.html` | Crafting materials and consumables: prices and every piece of gear that needs each one |
 | `mushrooms.html` | Mushrooms and edible beasts: effects raw and grilled, and the floors they spawn on |
 
 Open `index.html`, or serve the folder with GitHub Pages. `index.html`, `gear.html`, `materials.html` and `mushrooms.html` are written by
-`tools/make_pages.py`; edit that script rather than those files.
+`tools/make_pages.py`; edit that script rather than those files. It also writes the navigation bar into the hand-written pages.
 
 ## Which database the data comes from
 
@@ -42,6 +43,16 @@ The pictures in `img/` are renders of the game's own meshes and textures, produc
 
 - `decoys.py <dump-dir>` – dumps the Decoyshroom statue for each body (a static mesh with the body, its hair and the
   mushrooms growing on it). The renderer, `pack3d.py` and the models page's Decoy look use these.
+
+For the Jackals:
+
+- `jackals.py` – reads `master_jackal` and the tables around it (stats per level, per-tier tuning, the damage constants,
+  credits and mails) and writes `data/jackals.js`. Run it from the site's root folder.
+- `jackal_models.py <dump-dir>` – dumps the six Jackal meshes (X, Y, Z and their red-and-black `002` versions; each is
+  one mesh with skin, armour and hair) with `extract.py`'s functions and poses them with `pose.py`'s, writing `jackals.json`.
+  Serve the dump with `serve.py`, open `render.html?set=jackals` and run `renderJackals()` (the photos in `img/`) and
+  `bakeJackalTextures(1024)`; then `jackal_models.py <dump-dir> --pack <shots-dir> model3d data/jackals3d.js` packs
+  the meshes for the 3D view and copies the textures, keeping one copy of images that are identical.
 
 For the decal catalogue:
 

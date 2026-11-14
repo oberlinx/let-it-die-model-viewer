@@ -75,7 +75,9 @@ async function buildMesh(info, opts) {
     if (/CutSurface/.test(m.name)) continue;
     if (grp.part === 'mask' && opts.nomask) continue;
     g.addGroup(grp.start, grp.count, mats.length);
-    mats.push(await makeMaterial(m, opts));
+    // a Jackal is one mesh holding skin, armour, hair and visor glass: pick the material kind per section
+    const kind = opts.kind !== 'jackal' ? opts.kind : /_Glass$/.test(m.name) ? 'glass' : /_Hair/.test(m.parent || '') ? 'hair' : 'body';
+    mats.push(await makeMaterial(m, Object.assign({}, opts, { kind })));
   }
   return new THREE.Mesh(g, mats);
 }
@@ -88,6 +90,10 @@ let makeMaterial = async function (m, opts) {
   if (SCREAMER && opts.kind === 'body') {
     const swap = t => ({ file: t.file.replace('TX_CH_Main_', 'TX_CH_Enemy_') });
     m = Object.assign({}, m, { tex: { DiffuseMap: swap(m.tex.DiffuseMap), NormalMap: swap(m.tex.NormalMap) } });
+  }
+  if (opts.kind === 'glass') {
+    // visor glass: the game uses a reflection material; a dark, glossy, partly see-through stand-in
+    return new THREE.MeshStandardMaterial({ color: 0x15181c, roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.7, map: await loadTex(m.tex.DiffuseMap, true) });
   }
   const mat = new THREE.MeshStandardMaterial({ roughness: hair ? 0.55 : 0.62, metalness: 0 });
   mat.map = await loadTex(m.tex.DiffuseMap, true);
@@ -124,7 +130,8 @@ let makeMaterial = async function (m, opts) {
 
 let renderer, scene, camera, models;
 async function init() {
-  models = await (await fetch('models.json')).json();
+  // ?set=jackals renders jackals.json (from jackal_models.py) instead of the fighter bodies
+  models = await (await fetch((Q.get('set') || 'models') + '.json')).json();
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.setPixelRatio(1);
@@ -146,7 +153,7 @@ async function show(id, view, yaw, nomask) {
   const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(120, 260, 300); scene.add(key);
   const rim = new THREE.DirectionalLight(0xbfd0ff, 0.5); rim.position.set(-200, 200, -250); scene.add(rim);
   const root = new THREE.Group(); scene.add(root);
-  root.add(await buildMesh(m.body, { kind: 'body', model: m, nomask: nomask || Q.has('nomask') }));
+  root.add(await buildMesh(m.body, { kind: /^JACKAL_/.test(m.id) ? 'jackal' : 'body', model: m, nomask: nomask || Q.has('nomask') }));
   if (m.hair && !Q.has('nohair')) root.add(await buildMesh(m.hair, { kind: 'hair', model: m }));
   root.rotation.y = (yaw || 0) * Math.PI / 180;
   camera = new THREE.PerspectiveCamera(v.fov, v.w / v.h, 1, 2000);
@@ -377,6 +384,41 @@ async function renderAll() {
     await show(m.id, 'body', 180); await saveScaled(m.id + '_back.webp', 2);
   }
   await fetch('/save/done.png', { method: 'POST', body: 'x' });
+}
+// ---- Jackals (?set=jackals, from jackal_models.py): page photos, and textures for the 3D view ----
+async function renderJackals() {
+  for (const k in VIEWS) { VIEWS[k].w *= 2; VIEWS[k].h *= 2; }
+  for (const m of models) {
+    for (const k in texCache) delete texCache[k];
+    await show(m.id, 'face', 0); await saveScaled(m.id + '_face.webp', 2);
+    await show(m.id, 'face', 35); await saveScaled(m.id + '_side.webp', 2);
+    await show(m.id, 'body', 0); await saveScaled(m.id + '_body.webp', 2);
+    await show(m.id, 'body', 180); await saveScaled(m.id + '_back.webp', 2);
+  }
+  for (const k in VIEWS) { VIEWS[k].w /= 2; VIEWS[k].h /= 2; }
+  await fetch('/save/done.png', { method: 'POST', body: 'x' });
+}
+// One texture set per mesh section, named after its material without the MI_ prefix (jackal_models.py --pack uses the
+// same names). Hair gets its opacity (the mask map's red channel) as a separate _A image; the visor glass has none.
+async function bakeJackalTextures(size) {
+  const opaque = im => { const o = new Uint8Array(im.data); for (let i = 3; i < o.length; i += 4) o[i] = 255; return toCanvas({ w: im.w, h: im.h, data: o }); };
+  const done = new Set();
+  for (const m of models) {
+    for (const k in texCache) delete texCache[k];
+    for (const g of m.body.groups) {
+      const mt = g.material, name = mt.name.replace(/^MI_/, '');
+      if (/_Glass$/.test(mt.name) || done.has(name)) continue;
+      done.add(name);
+      await postScaled(name + '_D', opaque(await loadImage(mt.tex.DiffuseMap.file)), size, 0.86);
+      await postScaled(name + '_N', opaque(await loadImage(mt.tex.NormalMap.file)), size, 0.88);
+      if (/_Hair/.test(mt.parent || '')) {
+        const mk = await loadImage(mt.tex.MaskMap.file), al = new Uint8Array(mk.data.length);
+        for (let o = 0; o < al.length; o += 4) { al[o] = al[o + 1] = al[o + 2] = mk.data[o]; al[o + 3] = 255; }
+        await postScaled(name + '_A', toCanvas({ w: mk.w, h: mk.h, data: al }), size, 0.9);
+      }
+    }
+  }
+  await fetch('/save/done2.png', { method: 'POST', body: 'x' });
 }
 async function save(name) {
   const blob = await new Promise(r => renderer.domElement.toBlob(r, 'image/png'));

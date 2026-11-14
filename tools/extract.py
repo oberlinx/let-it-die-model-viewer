@@ -179,15 +179,16 @@ def export_mesh(path):
     done_mesh[path] = info
     return info
 
-c = sqlite3.connect('file:%s?mode=ro' % os.path.abspath(DB).replace(os.sep, '/'), uri=True)
-asset = dict(c.execute('select id, mesh from master_asset'))
-models = []
-for bid, baid, haid, gender in c.execute('select id, baid, haid, gender from master_body order by id'):
-    n = int(bid[-3:])
-    female = gender == 'GENDER_FEMALE'
-    m = dict(id=bid, label='%s %d' % ('Female' if female else 'Male', n), gender='female' if female else 'male',
-             body_asset=baid, hair_asset=haid or None, body=export_mesh(asset[baid]),
-             hair=export_mesh(asset[haid]) if haid else None)
-    models.append(m)
-json.dump(models, open(os.path.join(OUT, 'models.json'), 'w'), indent=1)
-print('done', len(models))
+if __name__ == '__main__':      # jackal_models.py imports the functions above
+    c = sqlite3.connect('file:%s?mode=ro' % os.path.abspath(DB).replace(os.sep, '/'), uri=True)
+    asset = dict(c.execute('select id, mesh from master_asset'))
+    models = []
+    for bid, baid, haid, gender in c.execute('select id, baid, haid, gender from master_body order by id'):
+        n = int(bid[-3:])
+        female = gender == 'GENDER_FEMALE'
+        m = dict(id=bid, label='%s %d' % ('Female' if female else 'Male', n), gender='female' if female else 'male',
+                 body_asset=baid, hair_asset=haid or None, body=export_mesh(asset[baid]),
+                 hair=export_mesh(asset[haid]) if haid else None)
+        models.append(m)
+    json.dump(models, open(os.path.join(OUT, 'models.json'), 'w'), indent=1)
+    print('done', len(models))

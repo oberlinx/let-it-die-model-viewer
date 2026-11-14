@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LET IT DIE Jackals</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LET IT DIE Jackals">
+<meta property="og:description" content="Jackals X, Y and Z: every tier's stats, gear, drops and damage taken, with renders and a rotatable 3D view.">
+<meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="The LET IT DIE Jackals X, Y and Z: all 15 tiers with stats, gear, drop odds and damage taken, plus renders and a 3D view.">
+<style>
+  :root {
+    --bg: #0a0a0a; --bg-raised: #131313; --panel: #161616;
+    --panel-border: #333333; --panel-border-bright: #4d4d4d;
+    --text: #e8e8e8; --text-dim: #9a9a9a; --text-faint: #6a6a6a;
+    --accent: #a8291f; --accent-bright: #d6392c;
+    --stage: radial-gradient(ellipse at 50% 35%, #3a3d44 0%, #1d1f23 70%);
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+  nav.pages { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  nav.pages a { color: var(--text-dim); text-decoration: none; font-size: 12px; padding: 5px 12px; border: 1px solid var(--panel-border); background: var(--bg-raised); }
+  nav.pages a:hover { color: var(--text); }
+  nav.pages a[aria-current] { color: #fff; border-color: var(--accent); background: var(--accent); }
+  header h1 { font-family: var(--display); font-size: 30px; letter-spacing: 0.5px; margin: 0 0 4px; }
+  header h1 span { color: var(--accent-bright); }
+  header p { margin: 0; color: var(--text-dim); max-width: 75ch; }
+  .bar { display: flex; flex-wrap: wrap; gap: 16px 28px; margin: 22px 0 18px; align-items: center; }
+  .seg { display: flex; align-items: center; gap: 8px; }
+  .seg .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .seg .btns { display: flex; flex-wrap: wrap; border: 1px solid var(--panel-border); }
+  .seg button {
+    background: var(--bg-raised); color: var(--text-dim); border: 0; border-right: 1px solid var(--panel-border);
+    font: inherit; font-size: 12px; padding: 6px 12px; cursor: pointer;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { color: var(--text); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--panel-border); padding: 0; color: inherit; font: inherit;
+    text-align: left; cursor: pointer; display: flex; flex-direction: column; min-width: 0;
+  }
+  .card:hover, .card:focus-visible { border-color: var(--accent-bright); outline: none; }
+  .card .shot { background: var(--stage); aspect-ratio: 1; overflow: hidden; }
+  .card .shot.tall { aspect-ratio: 1 / 2; }
+  .card .shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .card .meta { padding: 9px 11px 10px; border-top: 1px solid var(--panel-border); }
+  .card .name { font-family: var(--display); font-size: 20px; font-weight: 700; }
+  .card .id, .id { color: var(--text-dim); font-size: 12px; overflow-wrap: anywhere; }
+  .sectionHead { font-family: var(--display); font-size: 22px; margin: 34px 0 4px; }
+  .sectionNote { margin: 0 0 12px; color: var(--text-dim); max-width: 85ch; font-size: 13px; }
+  .tableBox { overflow-x: auto; border: 1px solid var(--panel-border); }
+  table.tbl { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+  table.tbl th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 8px 12px 6px; background: var(--panel); white-space: nowrap; border-bottom: 1px solid var(--panel-border); }
+  table.tbl td { padding: 4px 12px; white-space: nowrap; border-top: 1px solid #222; }
+  table.tbl td.n, table.tbl th.n { text-align: right; }
+  table.tbl tr.fam td { background: var(--bg-raised); font-family: var(--display); font-size: 15px; color: var(--text); }
+  table.tbl a { color: var(--text); }
+  .dim { color: var(--text-faint); }
+  .low { color: #7fc77f; }
+  .mails { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .mail { background: var(--panel); border: 1px solid var(--panel-border); padding: 12px 14px; font-size: 13px; color: var(--text-dim); }
+  .mail h3 { font-family: var(--display); font-size: 17px; color: var(--text); margin: 0 0 6px; }
+  .mail p { margin: 0 0 8px; }
+  footer { margin-top: 36px; color: var(--text-faint); font-size: 12px; max-width: 90ch; }
+  footer a, header a { color: var(--text-dim); }
+
+  dialog {
+    background: var(--panel); color: var(--text); border: 1px solid var(--panel-border-bright); padding: 0;
+    width: min(1180px, calc(100vw - 24px)); max-height: calc(100vh - 24px);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.8); }
+  .dlg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 16px; border-bottom: 1px solid var(--panel-border); }
+  .dlg-head h2 { font-family: var(--display); font-size: 24px; margin: 0; }
+  .dlg-head .nav { margin-left: auto; display: flex; gap: 6px; }
+  .dlg-head .nav button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; padding: 4px 11px; cursor: pointer; }
+  .dlg-head .nav button:hover { border-color: var(--accent-bright); }
+  .dlg-body { padding: 14px 16px 16px; overflow: auto; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 18px; }
+  .views { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .views figure { margin: 0; background: var(--stage); border: 1px solid var(--panel-border); position: relative; }
+  .views figure.tall { grid-row: span 2; }
+  .views img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .views figcaption { position: absolute; left: 8px; top: 6px; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .stage3d .canvasBox { height: min(66vh, 600px); background: var(--stage); border: 1px solid var(--panel-border); }
+  .stage3d canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  .stage3d canvas:active { cursor: grabbing; }
+  .stageBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 8px; }
+  .lookBar { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 10px; }
+  .tiers { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
+  .tiers button { background: var(--bg-raised); color: var(--text-dim); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 4px 10px; cursor: pointer; }
+  .tiers button:hover { color: var(--text); border-color: var(--accent-bright); }
+  .tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 13px; }
+  dt { color: var(--text-faint); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  dd a { color: var(--text); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 10px 0 12px; }
+  .stats div { background: var(--bg-raised); border: 1px solid var(--panel-border); padding: 5px 8px; }
+  .stats b { display: block; font-size: 15px; }
+  .stats span { color: var(--text-faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; }
+  h3.sub { font-family: var(--display); font-size: 16px; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--panel-border); }
+  .drops { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .drops li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; border-bottom: 1px dotted #2a2a2a; }
+  .drops a { color: var(--text); }
+  .dmg { max-height: 260px; overflow: auto; border: 1px solid var(--panel-border); }
+  @media (max-width: 860px) { .dlg-body { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { header h1 { font-size: 24px; } .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="jackals.html" aria-current="page">Jackals</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="materials.html">Materials</a><a href="mushrooms.html">Mushrooms</a></nav>
+  <header>
+    <h1>LET IT DIE <span>Jackals</span></h1>
+    <p>The Jackals are three hunters sent into the Tower by the "Sunflower Ceremony" company to collect corpses and steal gear for the black market. Each of X, Y and Z comes in five tiers. This page shows every tier's stats, gear, drops and how much damage it takes from each kind of attack, with renders of the game's own models.</p>
+  </header>
+
+  <div class="bar">
+    <div class="seg"><span class="lbl">View</span><div class="btns" id="view">
+      <button data-v="face" aria-pressed="true">Face</button><button data-v="side" aria-pressed="false">Angle</button><button data-v="body" aria-pressed="false">Body</button><button data-v="back" aria-pressed="false">Back</button>
+    </div></div>
+    <div class="seg"><span class="lbl">Look</span><div class="btns" id="look" data-seg="look">
+      <button data-v="std" aria-pressed="true">Standard</button><button data-v="d" aria-pressed="false">D (red and black)</button>
+    </div></div>
+  </div>
+
+  <main class="grid" id="grid"></main>
+
+  <section>
+    <h2 class="sectionHead">All tiers</h2>
+    <p class="sectionNote">Every Jackal row in the game data. Click a name for its gear, drops and damage taken. The look column says which model that tier uses.</p>
+    <div class="tableBox"><table class="tbl" id="tiers"></table></div>
+  </section>
+
+  <section>
+    <h2 class="sectionHead">What the game says about them</h2>
+    <p class="sectionNote">The in-game mails that mention the Jackals, as the game stores them. They are the only place the game names floors for them; the game data itself does not say which tier appears where.</p>
+    <div class="mails" id="mails"></div>
+  </section>
+
+  <footer>
+    <p>Data comes from the game's <code>master_jackal</code> table (one row per tier) and the tables around it. Each tier's level picks its HP and stats from <code>master_jackal_bodylvl_status_value</code>; the D tiers also carry a "HUD level", which looks like the level shown above them in a fight. Drops: a defeated Jackal leaves one thing, picked with the game's weights per 1,000, shown here as percentages; where the game gives one weight for the whole armour set it is split evenly between the three pieces, as the save editor does. Damage taken comes from <code>master_jackal_param_int</code> for the D tiers and from the <code>JACKAL_X_…</code>, <code>JACKAL_Y_…</code> and <code>JACKAL_Z_…</code> constants for the standard tiers (the game stores those with the Jackal's number, 1 to 3, added to the last digit, which is taken off here), plus the <code>JACKAL_…</code> constants that apply to all of them. Attacks not listed take full damage. The attack names are the game's internal ones made readable, so a label may not match an in-game weapon name exactly. The mushroom mix is the share of each kind among the mushrooms a D-tier Jackal throws. Voice cast is from the game's credits.</p>
+    <p>Renders show each model in the fighters' neutral idle stance (the Jackals use the same skeleton), lit outside the game engine, so colours are close to but not identical to in-game. The R tiers use the standard model and the D tiers the red-and-black one. The visor glass on Y and on X (D) uses a reflective material in the game and is drawn here as dark tinted glass. The 3D view uses the same meshes with textures reduced to 1024 px.</p>
+    <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
+  </footer>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-head">
+    <h2 id="d-name"></h2><span class="id" id="d-id"></span>
+    <div class="nav"><button id="d-prev" aria-label="Previous Jackal">&larr;</button><button id="d-next" aria-label="Next Jackal">&rarr;</button><button id="d-close">Close</button></div>
+  </div>
+  <div class="dlg-body">
+    <div>
+      <div class="lookBar">
+        <div class="seg"><div class="btns" id="d-look" data-seg="look"><button data-v="std" aria-pressed="true">Standard</button><button data-v="d" aria-pressed="false">D</button></div></div>
+        <div class="seg"><div class="btns" id="d-mode" data-seg="mode"><button data-v="photos" aria-pressed="true">Photos</button><button data-v="3d" aria-pressed="false">3D</button></div></div>
+      </div>
+      <div class="views" id="d-views"></div>
+      <div class="stage3d" id="d-3d" hidden>
+        <div class="canvasBox"><canvas id="d-canvas"></canvas></div>
+        <div class="stageBar"><span class="id" id="d-3d-note"></span>
+          <div class="seg"><div class="btns" id="d-preset"><button data-v="body" aria-pressed="false">Whole body</button><button data-v="face" aria-pressed="false">Face</button></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="tiers" id="d-tiers"></div>
+      <dl id="d-info"></dl>
+      <div class="stats" id="d-stats"></div>
+      <h3 class="sub">Drops</h3>
+      <ul class="drops" id="d-drops"></ul>
+      <div id="d-throws"></div>
+      <h3 class="sub">Damage taken</h3>
+      <p class="id" style="margin:0 0 6px;">Share of normal damage this tier takes. Attacks not listed take 100%.</p>
+      <div class="dmg"><table class="tbl" id="d-dmg"></table></div>
+    </div>
+  </div>
+</dialog>
+
+<script src="data/jackals.js"></script>
+<script src="data/jackals3d.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const num = n => Number(n).toLocaleString('en-US');
+const FAMS = JACKALS.families;
+const VIEWS = { face: 'Face', side: 'Angle', body: 'Body', back: 'Back' };
+const state = { view: 'face', look: 'std', mode: 'photos', open: -1, tier: 0, shown3d: '' };
+const lookId = (f, look) => f.looks[look === 'd' ? 1 : 0];
+const img = (id, v) => `img/${id}_${v}.webp`;
+// the gear grade of a tier from its armour names: '' (standard), 'R' or 'D'
+const grade = t => (/ (R|D)$/.exec(t.armor[0].name) || [, ''])[1];
+const tierLabel = t => `${t.tier}${grade(t) ? ' · ' + grade(t) : ''}`;
+// links: gear pieces and blueprints to the gear page, materials to the materials page
+function dropLink(d) {
+  if (d.kind === 'coins') return 'Kill Coins';
+  if (d.kind === 'part') return `<a href="gear.html#${d.id}">${esc(d.name)}</a>`;
+  if (d.id.startsWith('ITMP_')) return `<a href="gear.html#PT_${d.id.slice(5)}">${esc(d.name)}</a>`;
+  return `<a href="materials.html#${d.id}">${esc(d.name)}</a>`;
+}
+const pct = v => (Math.round(v * 100) / 100).toString() + '%';
+
+function renderGrid() {
+  $('grid').innerHTML = FAMS.map((f, i) => {
+    const id = lookId(f, state.look), last = f.tiers[f.tiers.length - 1];
+    return `<button class="card" data-i="${i}"><div class="shot${/body|back/.test(state.view) ? ' tall' : ''}"><img loading="lazy" alt="${f.name} ${VIEWS[state.view].toLowerCase()} view" src="${img(id, state.view)}"></div>
+      <div class="meta"><div class="name">${f.name}</div><div class="id">${esc(f.weaponType)} · levels ${f.tiers[0].level}–${last.level}</div>
+      <div class="id">Voice: ${esc(f.voice.en)} (English), ${esc(f.voice.jp)} (Japanese)</div></div></button>`;
+  }).join('');
+}
+function renderTable() {
+  const head = '<tr><th>Tier</th><th class="n">Level</th><th class="n">HP</th><th class="n">STR</th><th class="n">DEX</th><th class="n">VIT</th><th class="n">EXP</th><th>Weapon</th><th>Look</th></tr>';
+  $('tiers').innerHTML = head + FAMS.map((f, fi) => `<tr class="fam"><td colspan="9">${f.name}</td></tr>` + f.tiers.map((t, ti) =>
+    `<tr><td><a href="#${t.type}" data-open="${fi}:${ti}">${t.type}</a>${grade(t) ? ` <span class="dim">(${grade(t)} gear)</span>` : ''}</td><td class="n">${t.level}${t.hud ? ` <span class="dim">(HUD ${t.hud})</span>` : ''}</td>` +
+    `<td class="n">${num(t.stats.hp)}</td><td class="n">${num(t.stats.str)}</td><td class="n">${num(t.stats.dex)}</td><td class="n">${num(t.stats.vit)}</td><td class="n">${num(t.exp)}</td>` +
+    `<td><a href="gear.html#${t.weapon.id}">${esc(t.weapon.name)}</a></td><td>${/002$/.test(t.look) ? 'D (red and black)' : 'Standard'}</td></tr>`).join('')).join('');
+}
+function renderMails() {
+  // the game wraps its mail text with hard line breaks; blank lines separate paragraphs
+  $('mails').innerHTML = JACKALS.mails.map(m => `<div class="mail"><h3>${esc(m.title)}</h3>` +
+    m.text.split(/\n[\s　]*\n/).map(p => `<p>${esc(p.replace(/\s*\n\s*/g, ' ').trim())}</p>`).join('') + '</div>').join('') +
+    `<div class="mail"><h3>Quest: ${esc(JACKALS.quest.name)}</h3><p>Unlocks from floor ${JACKALS.quest.floor}. Reward: ${esc(JACKALS.quest.reward)}.</p></div>`;
+}
+
+function openJackal(i, tier) {
+  state.open = i;
+  const f = FAMS[i];
+  if (tier != null) { state.tier = tier; state.look = /002$/.test(f.tiers[tier].look) ? 'd' : 'std'; syncSeg('look'); }
+  state.tier = Math.min(state.tier, f.tiers.length - 1);
+  const t = f.tiers[state.tier], id = lookId(f, state.look);
+  $('d-name').textContent = f.name;
+  $('d-id').textContent = t.type;
+  $('d-tiers').innerHTML = f.tiers.map((x, k) => `<button data-t="${k}" aria-pressed="${k === state.tier}">${tierLabel(x)}</button>`).join('');
+  $('d-views').innerHTML = ['face', 'side'].map(v => `<figure><img alt="${f.name} ${VIEWS[v].toLowerCase()} view" src="${img(id, v)}"><figcaption>${VIEWS[v]}</figcaption></figure>`).join('') +
+    ['body', 'back'].map(v => `<figure><img alt="${f.name} ${VIEWS[v].toLowerCase()} view" src="${img(id, v)}"><figcaption>${VIEWS[v]}</figcaption></figure>`).join('');
+  const lookNote = /002$/.test(t.look) === (state.look === 'd') ? '' : ` <span class="dim">(this tier uses the ${/002$/.test(t.look) ? 'D' : 'standard'} look)</span>`;
+  $('d-info').innerHTML = [
+    ['Tier', `${t.type}${grade(t) ? `, wears ${grade(t)} gear` : ''}${lookNote}`],
+    ['Level', `${t.level}${t.hud ? ` (HUD level ${t.hud})` : ''}`],
+    ['EXP', num(t.exp)],
+    ['Weapon', `<a href="gear.html#${t.weapon.id}">${esc(t.weapon.name)}</a> (${esc(f.weaponType)})`],
+    ['Armour', t.armor.map(a => `<a href="gear.html#${a.id}">${esc(a.name)}</a>`).join(', ')],
+    ['Voice', `${esc(f.voice.en)} (English), ${esc(f.voice.jp)} (Japanese)`],
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const s = t.stats;
+  $('d-stats').innerHTML = [['HP', s.hp], ['STR', s.str], ['DEX', s.dex], ['VIT', s.vit], ['STM', s.stm], ['STM recovery', s.stmrecov], ['LUK', s.luk]]
+    .map(([k, v]) => `<div><b>${num(v)}</b><span>${k}</span></div>`).join('');
+  $('d-drops').innerHTML = t.drops.map(d => `<li><span>${dropLink(d)}${d.kind === 'coins' && t.coins ? ` <span class="dim">${num(t.coins[0])}–${num(t.coins[1])}</span>` : ''}</span><span>${pct(d.pct)}</span></li>`).join('');
+  $('d-throws').innerHTML = t.throws.length ? `<h3 class="sub">Mushrooms thrown</h3><ul class="drops">` +
+    t.throws.map(m => `<li><span><a href="mushrooms.html#${m.id}">${esc(m.name)}</a></span><span>${m.pct}%</span></li>`).join('') + '</ul>' : '';
+  const rows = Object.entries(t.dmg).filter(([, v]) => v !== 100);
+  $('d-dmg').innerHTML = rows.length ? '<tr><th>Attack</th><th class="n">Damage taken</th></tr>' +
+    rows.map(([k, v]) => `<tr><td>${esc(JACKALS.dmgLabels[k] || k)}</td><td class="n${v < 100 ? ' low' : ''}">${v}%</td></tr>`).join('') : '<tr><td>No changes: every attack does full damage.</td></tr>';
+  $('d-views').hidden = state.mode === '3d';
+  $('d-3d').hidden = state.mode !== '3d';
+  if (state.mode === '3d' && state.shown3d !== id) { state.shown3d = id; show3d(id); }
+  if (!$('dlg').open) $('dlg').showModal();
+  history.replaceState(null, '', '#' + t.type);
+}
+function step(d) { openJackal((state.open + d + FAMS.length) % FAMS.length); }
+
+// ---- 3D view: three.js is fetched the first time it is opened; mesh and textures per model on demand ----
+const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+const PRESETS = { face: { ty: 164, dist: 105 }, body: { ty: 90, dist: 400 } };
+let threeReady = null, v3 = null, v3Token = 0;
+function loadThree() {
+  return threeReady || (threeReady = new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = THREE_URL; s.onload = ok; s.onerror = () => { threeReady = null; fail(new Error('three.js did not load')); };
+    document.head.appendChild(s);
+  }));
+}
+function tex3d(name, srgb) {
+  const t = new THREE.TextureLoader().load(`model3d/${name}.webp`, () => { if (v3) v3.dirty = true; });
+  t.flipY = false; t.encoding = srgb ? THREE.sRGBEncoding : THREE.LinearEncoding; t.anisotropy = 8;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+// One section's material: its baked colour and normal images; hair adds an opacity image; the visor glass is a
+// dark, glossy, partly see-through stand-in for the game's reflective material.
+function mat3d(grp) {
+  if (grp.kind === 'glass') return new THREE.MeshStandardMaterial({ color: 0x15181c, roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.7 });
+  const hair = grp.kind === 'hair';
+  const m = new THREE.MeshStandardMaterial({ roughness: hair ? 0.55 : 0.62, metalness: 0, map: tex3d(grp.d, true), normalMap: tex3d(grp.n, false), normalScale: new THREE.Vector2(1, -1) });
+  if (hair) {
+    m.alphaMap = tex3d(grp.a, false); m.alphaTest = 0.5; m.side = THREE.DoubleSide;
+    // strands that pass the alpha test must be written fully opaque, or the page shows through the canvas there
+    m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>' + String.fromCharCode(10) + 'gl_FragColor.a = 1.0;'); };
+  }
+  return m;
+}
+// mesh3d(): model3d/<name>.bin in pack3d.py's layout (positions, normals, UVs, indices), already in the idle pose.
+async function mesh3d(info) {
+  const res = await fetch(`model3d/${info.name}.bin`);
+  if (!res.ok) throw new Error(`mesh file missing: ${res.status}`);
+  const buf = await res.arrayBuffer(), n = info.verts;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf, 0, n * 3), 3));
+  g.setAttribute('normal', new THREE.InterleavedBufferAttribute(new THREE.InterleavedBuffer(new Int8Array(buf, n * 12, n * 4), 4), 3, 0, true));
+  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(buf, n * 16, n * 2), 2));
+  g.setIndex(new THREE.BufferAttribute(new Uint16Array(buf, n * 24, info.indices), 1));
+  const mats = info.groups.map((grp, i) => { g.addGroup(grp.start, grp.count, i); return mat3d(grp); });
+  return new THREE.Mesh(g, mats);
+}
+function v3Init() {
+  const canvas = $('d-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x555560, 0.75));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9), rim = new THREE.DirectionalLight(0xbfd0ff, 0.5);
+  const camera = new THREE.PerspectiveCamera(30, 1, 1, 3000);
+  camera.add(key); camera.add(rim); key.position.set(120, 170, 300); rim.position.set(-200, 110, -250);
+  scene.add(camera);
+  v3 = { renderer, scene, camera, root: null, yaw: 0, pitch: 0, dirty: true, ...PRESETS.body };
+  // drag: rotate (shift or right button: move up/down); wheel or pinch: zoom
+  const ptrs = new Map(); let pinch = 0;
+  canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, e); pinch = 0; });
+  const up = e => { ptrs.delete(e.pointerId); pinch = 0; };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('pointermove', e => {
+    const prev = ptrs.get(e.pointerId);
+    if (!prev) return;
+    ptrs.set(e.pointerId, e);
+    if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      if (pinch) v3Zoom(pinch / d);
+      pinch = d;
+    } else if (e.shiftKey || (e.buttons & 2)) {
+      v3.ty = Math.max(0, Math.min(190, v3.ty + (e.clientY - prev.clientY) * v3.dist / 900));
+    } else {
+      v3.yaw -= (e.clientX - prev.clientX) * 0.008;
+      v3.pitch = Math.max(-1.2, Math.min(1.2, v3.pitch + (e.clientY - prev.clientY) * 0.006));
+    }
+    v3.dirty = true;
+  });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); v3Zoom(Math.exp(e.deltaY * 0.001)); }, { passive: false });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  new ResizeObserver(() => { v3.dirty = true; }).observe(canvas.parentElement);
+  (function frame() {
+    requestAnimationFrame(frame);
+    if (!v3.dirty || !$('dlg').open || state.mode !== '3d') return;
+    v3.dirty = false;
+    const w = canvas.parentElement.clientWidth, h = canvas.parentElement.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    const cp = Math.cos(v3.pitch);
+    camera.position.set(Math.sin(v3.yaw) * cp * v3.dist, v3.ty + Math.sin(v3.pitch) * v3.dist, Math.cos(v3.yaw) * cp * v3.dist);
+    camera.lookAt(0, v3.ty, 0);
+    renderer.render(scene, camera);
+  })();
+}
+function v3Zoom(f) { v3.dist = Math.max(40, Math.min(700, v3.dist * f)); v3.dirty = true; }
+function v3Preset(name) { if (v3) Object.assign(v3, PRESETS[name], { yaw: 0, pitch: 0, dirty: true }); }
+function v3Clear() {
+  if (!v3 || !v3.root) return;
+  v3.root.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    for (const m of [].concat(o.material || [])) { for (const k of ['map', 'normalMap', 'alphaMap']) if (m[k]) m[k].dispose(); m.dispose(); }
+  });
+  v3.scene.remove(v3.root); v3.root = null;
+}
+// show3d(): load one model into the 3D view. A newer call wins if the user moves on while one is loading.
+async function show3d(id) {
+  const token = ++v3Token, note = $('d-3d-note');
+  note.textContent = 'Loading 3D model…';
+  try {
+    await loadThree();
+    if (!v3) v3Init();
+    const root = new THREE.Group();
+    root.add(await mesh3d(JACKALS3D[id]));
+    if (token !== v3Token) return;
+    v3Clear();
+    v3.root = root; v3.scene.add(root); v3.dirty = true;
+    note.textContent = 'Drag to rotate · scroll or pinch to zoom · shift-drag to move up and down';
+  } catch (err) {
+    if (token === v3Token) { note.textContent = 'The 3D view could not be loaded (' + err.message + ').'; state.shown3d = ''; }
+  }
+}
+
+function syncSeg(key) { for (const x of document.querySelectorAll(`[data-seg="${key}"] button`)) x.setAttribute('aria-pressed', String(x.dataset.v === state[key])); }
+function bindSeg(id, key) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state[key] = b.dataset.v;
+    for (const x of $(id).children) x.setAttribute('aria-pressed', String(x === b));
+    syncSeg(key);
+    renderGrid();
+    if ($('dlg').open) openJackal(state.open);
+  });
+}
+bindSeg('view', 'view');
+bindSeg('look', 'look');
+bindSeg('d-look', 'look');
+bindSeg('d-mode', 'mode');
+$('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openJackal(+c.dataset.i, 0); });
+$('tiers').addEventListener('click', e => { const a = e.target.closest('[data-open]'); if (a) { e.preventDefault(); const [fi, ti] = a.dataset.open.split(':').map(Number); openJackal(fi, ti); } });
+$('d-tiers').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) openJackal(state.open, +b.dataset.t); });
+$('d-preset').addEventListener('click', e => { const b = e.target.closest('button'); if (b) v3Preset(b.dataset.v); });
+const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
+const closeDlg = () => { $('dlg').close(); clearHash(); };
+$('d-close').addEventListener('click', closeDlg);
+$('d-prev').addEventListener('click', () => step(-1));
+$('d-next').addEventListener('click', () => step(1));
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });
+$('dlg').addEventListener('close', clearHash);
+$('dlg').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
+// #JACKAL_YYY (a tier) or #X (a Jackal) in the address opens it
+function openFromHash() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  FAMS.forEach((f, fi) => {
+    const ti = f.tiers.findIndex(t => t.type === h);
+    if (ti >= 0) openJackal(fi, ti); else if (h === f.id || h === 'JACKAL_' + f.id + '_FAMILY') openJackal(fi, 0);
+  });
+}
+window.addEventListener('hashchange', openFromHash);
+renderGrid();
+renderTable();
+renderMails();
+openFromHash();
+</script>
+</body>
+</html>
