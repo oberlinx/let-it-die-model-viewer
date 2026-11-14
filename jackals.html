@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="website">
 <meta property="og:title" content="LET IT DIE Jackals">
-<meta property="og:description" content="Jackals X, Y and Z: every tier's stats, gear, drops and damage taken, with renders and a rotatable 3D view.">
+<meta property="og:description" content="Jackals X, Y and Z: every tier's stats, gear, drops and damage taken, with renders, a rotatable 3D view and all their voice clips.">
 <meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="description" content="The LET IT DIE Jackals X, Y and Z: all 15 tiers with stats, gear, drop odds and damage taken, plus renders and a 3D view.">
@@ -111,6 +111,17 @@
   .drops li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; border-bottom: 1px dotted #2a2a2a; }
   .drops a { color: var(--text); }
   .dmg { max-height: 260px; overflow: auto; border: 1px solid var(--panel-border); }
+  .voiceBox { grid-column: 1 / -1; }
+  .voiceHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; border-bottom: 1px solid var(--panel-border); margin-bottom: 8px; }
+  .voiceHead h3.sub { border: 0; margin: 6px 0; padding: 0; }
+  .vrow { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0 0 8px; }
+  .vrow .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; min-width: 90px; }
+  .vbtn { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 3px 9px; cursor: pointer; }
+  .vbtn:hover { border-color: var(--accent-bright); }
+  .vbtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lines { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 4px 16px; margin: 0 0 10px; }
+  .lines .vbtn { width: 100%; text-align: left; display: flex; gap: 8px; }
+  .lines .vbtn .dim { flex: none; }
   @media (max-width: 860px) { .dlg-body { grid-template-columns: 1fr; } }
   @media (max-width: 720px) { header h1 { font-size: 24px; } .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
@@ -148,6 +159,7 @@
 
   <footer>
     <p>Data comes from the game's <code>master_jackal</code> table (one row per tier) and the tables around it. Each tier's level picks its HP and stats from <code>master_jackal_bodylvl_status_value</code>; the D tiers also carry a "HUD level", which looks like the level shown above them in a fight. Drops: a defeated Jackal leaves one thing, picked with the game's weights per 1,000, shown here as percentages; where the game gives one weight for the whole armour set it is split evenly between the three pieces, as the save editor does. Damage taken comes from <code>master_jackal_param_int</code> for the D tiers and from the <code>JACKAL_X_…</code>, <code>JACKAL_Y_…</code> and <code>JACKAL_Z_…</code> constants for the standard tiers (the game stores those with the Jackal's number, 1 to 3, added to the last digit, which is taken off here), plus the <code>JACKAL_…</code> constants that apply to all of them. Attacks not listed take full damage. The attack names are the game's internal ones made readable, so a label may not match an in-game weapon name exactly. The mushroom mix is the share of each kind among the mushrooms a D-tier Jackal throws. Voice cast is from the game's credits.</p>
+    <p>Voice: every clip the game has for each Jackal, in English and Japanese, copied as stored (Ogg Vorbis): its combat voice (attacks, getting hit, death and idle chatter, 47 to 54 clips) and the lines it speaks while collecting and when beaten, with the game's subtitles. The game text also holds lines for two more of their scenes whose audio is not in the PC game; those are not included.</p>
     <p>Renders show each model in the fighters' neutral idle stance (the Jackals use the same skeleton), lit outside the game engine, so colours are close to but not identical to in-game. The R tiers use the standard model and the D tiers the red-and-black one. The visor glass on Y and on X (D) uses a reflective material in the game and is drawn here as dark tinted glass. The 3D view uses the same meshes with textures reduced to 1024 px.</p>
     <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
   </footer>
@@ -183,18 +195,25 @@
       <p class="id" style="margin:0 0 6px;">Share of normal damage this tier takes. Attacks not listed take 100%.</p>
       <div class="dmg"><table class="tbl" id="d-dmg"></table></div>
     </div>
+    <section class="voiceBox">
+      <div class="voiceHead"><h3 class="sub">Voice</h3>
+        <div class="seg"><div class="btns" id="d-lang" data-seg="lang"><button data-v="en" aria-pressed="true">English</button><button data-v="jp" aria-pressed="false">Japanese</button></div></div>
+        <span class="id" id="d-clip-note"></span></div>
+      <div id="d-voice"></div>
+    </section>
   </div>
 </dialog>
 
 <script src="data/jackals.js"></script>
 <script src="data/jackals3d.js"></script>
+<script src="data/jackalvoices.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const num = n => Number(n).toLocaleString('en-US');
 const FAMS = JACKALS.families;
 const VIEWS = { face: 'Face', side: 'Angle', body: 'Body', back: 'Back' };
-const state = { view: 'face', look: 'std', mode: 'photos', open: -1, tier: 0, shown3d: '' };
+const state = { view: 'face', look: 'std', mode: 'photos', lang: 'en', open: -1, tier: 0, shown3d: '', voiceFor: '' };
 const lookId = (f, look) => f.looks[look === 'd' ? 1 : 0];
 const img = (id, v) => `img/${id}_${v}.webp`;
 // the gear grade of a tier from its armour names: '' (standard), 'R' or 'D'
@@ -263,10 +282,39 @@ function openJackal(i, tier) {
   $('d-views').hidden = state.mode === '3d';
   $('d-3d').hidden = state.mode !== '3d';
   if (state.mode === '3d' && state.shown3d !== id) { state.shown3d = id; show3d(id); }
+  if (state.voiceFor !== state.open + state.lang) { state.voiceFor = state.open + state.lang; stopClip(); renderVoice(); }
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + t.type);
 }
 function step(d) { openJackal((state.open + d + FAMS.length) % FAMS.length); }
+
+// ---- Voice: every clip the game has for the open Jackal, from voice/jackal/<clip>_<en|jp>.ogg (tools/jackal_voices.py) ----
+const VKINDS = { attack: 'Attack', hurt: 'Hurt', death: 'Death', idle: 'Idle' };
+const SCENES = { '01': 'While collecting', '03': 'When beaten' };
+let playing = null, playingBtn = null;
+function renderVoice() {
+  const v = JACKAL_VOICES[FAMS[state.open].id];
+  if (!v) { $('d-voice').innerHTML = ''; return; }
+  const combat = Object.keys(VKINDS).filter(k => v.combat[k]).map(k => `<div class="vrow"><span class="lbl">${VKINDS[k]}</span>` +
+    v.combat[k].map((c, i) => `<button class="vbtn" data-clip="${c}" title="${VKINDS[k]} ${i + 1}">&#9654; ${i + 1}</button>`).join('') + '</div>').join('');
+  const byScene = {};
+  for (const l of v.lines) (byScene[l.scene.slice(0, 2)] = byScene[l.scene.slice(0, 2)] || []).push(l);
+  const lines = Object.keys(byScene).sort().map(s => `<div class="vrow"><span class="lbl">${SCENES[s] || 'Scene ' + s}</span></div><div class="lines">` +
+    byScene[s].map(l => `<button class="vbtn" data-clip="${l.clip}"><span class="dim">&#9654;</span><span>${esc((l[state.lang] || '').replace(/\s*\n\s*/g, ' '))}</span></button>`).join('') + '</div>').join('');
+  $('d-voice').innerHTML = combat + lines;
+}
+function stopClip() {
+  if (playing) { playing.pause(); playing = null; }
+  if (playingBtn) { playingBtn.classList.remove('on'); playingBtn = null; }
+}
+function playClip(btn) {
+  stopClip();
+  playing = new Audio(`voice/jackal/${btn.dataset.clip}_${state.lang}.ogg`);
+  playingBtn = btn; btn.classList.add('on');
+  const a = playing;
+  a.addEventListener('ended', () => { if (playing === a) stopClip(); });
+  a.play().catch(() => { $('d-clip-note').textContent = 'This browser could not play the clip (Ogg Vorbis audio).'; stopClip(); });
+}
 
 // ---- 3D view: three.js is fetched the first time it is opened; mesh and textures per model on demand ----
 const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
@@ -405,17 +453,19 @@ bindSeg('view', 'view');
 bindSeg('look', 'look');
 bindSeg('d-look', 'look');
 bindSeg('d-mode', 'mode');
+bindSeg('d-lang', 'lang');
+$('d-voice').addEventListener('click', e => { const b = e.target.closest('[data-clip]'); if (b) playClip(b); });
 $('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openJackal(+c.dataset.i, 0); });
 $('tiers').addEventListener('click', e => { const a = e.target.closest('[data-open]'); if (a) { e.preventDefault(); const [fi, ti] = a.dataset.open.split(':').map(Number); openJackal(fi, ti); } });
 $('d-tiers').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) openJackal(state.open, +b.dataset.t); });
 $('d-preset').addEventListener('click', e => { const b = e.target.closest('button'); if (b) v3Preset(b.dataset.v); });
 const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
-const closeDlg = () => { $('dlg').close(); clearHash(); };
+const closeDlg = () => { stopClip(); $('dlg').close(); clearHash(); };
 $('d-close').addEventListener('click', closeDlg);
 $('d-prev').addEventListener('click', () => step(-1));
 $('d-next').addEventListener('click', () => step(1));
 $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });
-$('dlg').addEventListener('close', clearHash);
+$('dlg').addEventListener('close', () => { stopClip(); clearHash(); });
 $('dlg').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
 // #JACKAL_YYY (a tier) or #X (a Jackal) in the address opens it
 function openFromHash() {
