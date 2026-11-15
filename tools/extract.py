@@ -173,7 +173,10 @@ def export_mesh(path):
             mat.update(parent=d['parent'], vec=d['vec'], sca=d['sca'], tex={})
             for k, t in d['tex'].items():
                 if t and 'Stiker' not in t:
-                    mat['tex'][k] = export_tex(t, pkgs + [mp])
+                    try:
+                        mat['tex'][k] = export_tex(t, pkgs + [mp])
+                    except KeyError as err:     # an uncompressed format (some boss reflection and normal maps): left out
+                        print('  !! texture format not handled', t, err); done_tex[t] = None
         g['material'] = mat
         info['groups'].append(g)
     done_mesh[path] = info

@@ -7,7 +7,7 @@ The stylesheet is taken from decals.html so the pages stay in step with the hand
 import json, re, sys
 SRC = sys.argv[1]
 SITE = 'https://oberlinx.github.io/let-it-die-model-viewer/'
-NAV = [('./', 'Home'), ('models.html', 'Fighter Models'), ('jackals.html', 'Jackals'), ('decals.html', 'Skill Decals'), ('gear.html', 'Gear'), ('materials.html', 'Materials'), ('mushrooms.html', 'Mushrooms')]
+NAV = [('./', 'Home'), ('models.html', 'Fighter Models'), ('jackals.html', 'Jackals'), ('bosses.html', 'Bosses'), ('decals.html', 'Skill Decals'), ('gear.html', 'Gear'), ('materials.html', 'Materials'), ('mushrooms.html', 'Mushrooms')]
 
 
 def nav(current):
@@ -490,7 +490,7 @@ home_css = css + """  .hero { margin: 8px 0 22px; }
   .hit .id { margin-left: auto; color: var(--text-faint); font-size: 11px; }
   .more { color: var(--text-faint); font-size: 12px; padding: 4px 6px; }
 """
-home = HEAD % dict(title='LET IT DIE Viewer', desc='Fighter models, Jackals, skill decals, gear, mushrooms and beasts from LET IT DIE, taken from the game data.', site=SITE, css=home_css) + f"""<body>
+home = HEAD % dict(title='LET IT DIE Viewer', desc='Fighter models, Jackals, bosses, skill decals, gear, mushrooms and beasts from LET IT DIE, taken from the game data.', site=SITE, css=home_css) + f"""<body>
 <script>
 // Old links from the save editor point at the site root with a model id: send those to the models page.
 if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.hash);
@@ -510,6 +510,8 @@ if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.has
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/%s_face.webp"></div>' % i for i in ('BODY_FEMALE_001', 'BODY_MALE_004', 'BODY_FEMALE_007', 'BODY_MALE_008'))}</div></a>
     <a class="section" href="jackals.html"><h2>Jackals</h2><p>Jackals X, Y and Z in all 15 tiers: stats, gear, drop odds, damage taken, renders and a 3D view.</p>
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/%s_face.webp"></div>' % i for i in ('JACKAL_X', 'JACKAL_Y', 'JACKAL_Z', 'JACKAL_Z002'))}</div></a>
+    <a class="section" href="bosses.html"><h2>Bosses</h2><p>The four Dons and the four mini bosses with their Mk-2 versions: floors, stats per level, drops, renders, a 3D view and voices.</p>
+      <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/%s_front.webp"></div>' % i for i in ('DON_MAX', 'DON_CROWLEY', 'MBOSS3', 'STAGE_BOSS1'))}</div></a>
     <a class="section" href="decals.html"><h2>Skill Decals</h2><p>All 368 decals: icon, effect, rarity, where each comes from, normal and premium.</p>
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/decals/%s.webp"></div>' % i for i in ('SKL_DEATH_PROOF', 'SKL_ATK_CHARGED', 'SKL_MONEYUP_01', 'SKL_SHOVEL_ABILITY_UP'))}</div></a>
     <a class="section" href="gear.html"><h2>Gear</h2><p>{len(gear['gear']):,} weapons and armour pieces: stats at every upgrade level, upgrade lines and crafting costs.</p>
@@ -531,6 +533,7 @@ if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.has
 <script src="data/mushrooms.js"></script>
 <script src="data/gasmasks.js"></script>
 <script src="data/jackals.js"></script>
+<script src="data/bosses.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({{ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }}[c]));
@@ -539,6 +542,8 @@ const MODELS = {json.dumps(MODELS)};
 const INDEX = [].concat(
   MODELS.map(([id, name]) => ['Fighter models', name, id, 'models.html#' + id, `img/${{id}}_face.webp`, '']),
   JACKALS.families.flatMap(f => f.tiers.map(t => ['Jackals', f.name + ' (' + t.tier + ')', t.type, 'jackals.html#' + t.type, `img/${{t.look}}_face.webp`, [t.weapon.name, f.voice.en, f.voice.jp].join(' ')])),
+  BOSSES.dons.map(d => ['Bosses', d.name, d.id, 'bosses.html#' + d.id, `img/${{d.id}}_front.webp`, ['Don', d.area, d.rideName, d.voice.en, d.voice.jp].join(' ')]),
+  BOSSES.minis.flatMap(m => [['Bosses', m.name, m.id, 'bosses.html#' + m.id, `img/${{m.id}}_front.webp`, ['mini boss', m.voice.en, m.voice.jp].join(' ')], ['Bosses', m.name + ' Mk-2', m.mk2, 'bosses.html#' + m.mk2, `img/${{m.mk2}}_front.webp`, 'mini boss Mk-2']]),
   GASMASKS.map(m => ['Gas masks', m.name, 'Gas mask ' + m.no, 'models.html#masks', m.icon ? `img/items/${{m.icon}}.webp` : '', m.female + ' ' + m.male]),
   DECALS.map(d => ['Skill decals', d.name + (d.premium ? ' (Premium)' : ''), d.id, 'decals.html#' + d.id, `img/decals/${{d.icon}}.webp`, d.desc]),
   GEAR.gear.map(g => ['Gear', g.name, g.id, 'gear.html#' + g.id, g.icon ? `img/items/${{g.icon}}.webp` : '', [g.type, g.weapon, g.category].join(' ')]),
@@ -570,7 +575,7 @@ search();
 open('index.html', 'w', encoding='utf-8', newline='\n').write(home)
 
 # shared nav on the hand-written pages
-for f, cur in (('models.html', 'models.html'), ('jackals.html', 'jackals.html'), ('decals.html', 'decals.html')):
+for f, cur in (('models.html', 'models.html'), ('jackals.html', 'jackals.html'), ('bosses.html', 'bosses.html'), ('decals.html', 'decals.html')):
     s = open(f, encoding='utf-8').read()
     s, n = re.subn(r'<nav class="pages">.*?</nav>', nav(cur), s, flags=re.S)
     assert n == 1, f

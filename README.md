@@ -8,6 +8,7 @@ the [LET IT DIE save editor](https://oberlinx.github.io/let-it-die-save-editor/)
 | `index.html` | Home: the sections and one search box across all of them |
 | `models.html` | The 16 fighter bodies (photos, rotatable 3D view in three poses, voices, taunts, side-by-side compare) and the 8 gas masks |
 | `jackals.html` | Jackals X, Y and Z in all 15 tiers: stats, gear, drop odds, damage taken per attack, mushrooms thrown, voice cast and the in-game mails about them; photos and a rotatable 3D view of the standard and red-and-black (D) models; every voice clip in English and Japanese, with subtitles for the spoken lines |
+| `bosses.html` | The four Dons (Max Sharp, Colonel Jackson, Mr. Crowley, Taro Gunkanyama) and the four mini bosses (COEN, JIN-DIE, GOTO-9, U-10) with their Mk-2 versions: where they appear, stats per level, drops, quests, voice cast, photos, a rotatable 3D view and every voice clip in English and Japanese |
 | `decals.html` | All 368 skill decals, a normal and premium pair sharing one card |
 | `gear.html` | Weapons and armour: stats at every upgrade level, STR/DEX scaling and damage types, blueprint sources, upgrade lines, armour sets, development and upgrade costs |
 | `materials.html` | Crafting materials and consumables: prices and every piece of gear that needs each one |
@@ -44,17 +45,22 @@ The pictures in `img/` are renders of the game's own meshes and textures, produc
 - `decoys.py <dump-dir>` – dumps the Decoyshroom statue for each body (a static mesh with the body, its hair and the
   mushrooms growing on it). The renderer, `pack3d.py` and the models page's Decoy look use these.
 
-For the Jackals:
+For the Jackals, Dons and mini bosses:
 
 - `jackals.py` – reads `master_jackal` and the tables around it (stats per level, per-tier tuning, the damage constants,
   credits and mails) and writes `data/jackals.js`. Run it from the site's root folder.
-- `jackal_models.py <dump-dir>` – dumps the six Jackal meshes (X, Y, Z and their red-and-black `002` versions; each is
-  one mesh with skin, armour and hair) with `extract.py`'s functions and poses them with `pose.py`'s, writing `jackals.json`.
-  Serve the dump with `serve.py`, open `render.html?set=jackals` and run `renderJackals()` (the photos in `img/`) and
-  `bakeJackalTextures(1024)`; then `jackal_models.py <dump-dir> --pack <shots-dir> model3d data/jackals3d.js` packs
-  the meshes for the 3D view and copies the textures, keeping one copy of images that are identical.
-- `jackal_voices.py` – copies all of the Jackals' voice clips in both languages (combat voice and scene lines, as stored,
-  Ogg Vorbis) into `voice/jackal/` and writes `data/jackalvoices.js` with the subtitles. Run it from the site's root folder.
+- `bosses.py` – reads the mini-boss tables (`master_mboss*`: HP, stats, EXP, Kill Coins and SPLithium per level), their
+  floors and drops (`master_floor`, `master_floor_drop_gen`), the boss arenas, quests and credits, and writes `data/bosses.js`.
+- `enemy_models.py <jackals|bosses> <dump-dir>` – dumps that set's meshes with `extract.py`'s functions and poses each
+  with its own idle animation using `pose.py`'s, writing `<set>.json`: the six Jackal meshes (X, Y, Z and their
+  red-and-black `002` versions), the four Dons, the four mini bosses and their four Mk-2 versions. Serve the dump with
+  `serve.py`, open `render.html?set=<set>` and run `renderSet()` (the photos in `img/`; bosses are framed to their own size)
+  and `bakeSetTextures(1024)`; then `enemy_models.py <set> <dump-dir> --pack <shots-dir> model3d data/<set>3d.js` packs
+  the meshes for the 3D view (uint32 indices for meshes past 65,535 vertices) and copies the textures, keeping one copy
+  of images that are identical.
+- `jackal_voices.py` and `boss_voices.py` – copy every voice clip of the Jackals, and of the Dons and mini bosses, in both
+  languages (as stored, Ogg Vorbis) into `voice/jackal/` and `voice/boss/`, and write `data/jackalvoices.js` and
+  `data/bossvoices.js` with the subtitles of the spoken lines. Run them from the site's root folder.
 
 For the decal catalogue:
 

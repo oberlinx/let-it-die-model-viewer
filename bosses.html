@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LET IT DIE Bosses</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LET IT DIE Bosses">
+<meta property="og:description" content="The four Dons and the four mini bosses with their Mk-2 versions: where they appear, stats per level, drops, renders, a 3D view and every voice clip.">
+<meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="LET IT DIE's Dons (Max Sharp, Colonel Jackson, Mr. Crowley, Taro Gunkanyama) and mini bosses (COEN, JIN-DIE, GOTO-9, U-10): stats, floors, drops, renders, 3D view and voices.">
+<style>
+  :root {
+    --bg: #0a0a0a; --bg-raised: #131313; --panel: #161616;
+    --panel-border: #333333; --panel-border-bright: #4d4d4d;
+    --text: #e8e8e8; --text-dim: #9a9a9a; --text-faint: #6a6a6a;
+    --accent: #a8291f; --accent-bright: #d6392c;
+    --stage: radial-gradient(ellipse at 50% 35%, #3a3d44 0%, #1d1f23 70%);
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+  nav.pages { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  nav.pages a { color: var(--text-dim); text-decoration: none; font-size: 12px; padding: 5px 12px; border: 1px solid var(--panel-border); background: var(--bg-raised); }
+  nav.pages a:hover { color: var(--text); }
+  nav.pages a[aria-current] { color: #fff; border-color: var(--accent); background: var(--accent); }
+  header h1 { font-family: var(--display); font-size: 30px; letter-spacing: 0.5px; margin: 0 0 4px; }
+  header h1 span { color: var(--accent-bright); }
+  header p { margin: 0; color: var(--text-dim); max-width: 78ch; }
+  .bar { display: flex; flex-wrap: wrap; gap: 16px 28px; margin: 22px 0 6px; align-items: center; }
+  .seg { display: flex; align-items: center; gap: 8px; }
+  .seg .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .seg .btns { display: flex; flex-wrap: wrap; border: 1px solid var(--panel-border); }
+  .seg button { background: var(--bg-raised); color: var(--text-dim); border: 0; border-right: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 6px 12px; cursor: pointer; }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { color: var(--text); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .sectionHead { font-family: var(--display); font-size: 22px; margin: 28px 0 4px; }
+  .sectionNote { margin: 0 0 12px; color: var(--text-dim); max-width: 85ch; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--panel-border); padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; min-width: 0; }
+  .card:hover, .card:focus-visible { border-color: var(--accent-bright); outline: none; }
+  .card .shot { background: var(--stage); aspect-ratio: 1; overflow: hidden; }
+  .card .shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .card .meta { padding: 9px 11px 10px; border-top: 1px solid var(--panel-border); }
+  .card .name { font-family: var(--display); font-size: 20px; font-weight: 700; }
+  .id { color: var(--text-dim); font-size: 12px; overflow-wrap: anywhere; }
+  .dim { color: var(--text-faint); }
+  footer { margin-top: 36px; color: var(--text-faint); font-size: 12px; max-width: 90ch; }
+  footer a, header a { color: var(--text-dim); }
+
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--panel-border-bright); padding: 0; width: min(1180px, calc(100vw - 24px)); max-height: calc(100vh - 24px); }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.8); }
+  .dlg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 16px; border-bottom: 1px solid var(--panel-border); }
+  .dlg-head h2 { font-family: var(--display); font-size: 24px; margin: 0; }
+  .dlg-head .nav { margin-left: auto; display: flex; gap: 6px; }
+  .dlg-head .nav button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; padding: 4px 11px; cursor: pointer; }
+  .dlg-head .nav button:hover { border-color: var(--accent-bright); }
+  .dlg-body { padding: 14px 16px 16px; overflow: auto; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 18px; }
+  .lookBar { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 10px; }
+  .views { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .views figure { margin: 0; background: var(--stage); border: 1px solid var(--panel-border); position: relative; aspect-ratio: 1; }
+  .views img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .views figcaption { position: absolute; left: 8px; top: 6px; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .stage3d .canvasBox { height: min(66vh, 600px); background: var(--stage); border: 1px solid var(--panel-border); }
+  .stage3d canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  .stage3d canvas:active { cursor: grabbing; }
+  .stageBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 8px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 13px; }
+  dt { color: var(--text-faint); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  dd a { color: var(--text); }
+  h3.sub { font-family: var(--display); font-size: 16px; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--panel-border); }
+  .tbox { max-height: 280px; overflow: auto; border: 1px solid var(--panel-border); }
+  table.tbl { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+  table.tbl th { text-align: right; color: var(--text-faint); font-weight: 400; padding: 7px 10px 5px; background: var(--panel); white-space: nowrap; position: sticky; top: 0; border-bottom: 1px solid var(--panel-border); }
+  table.tbl td { padding: 3px 10px; white-space: nowrap; border-top: 1px solid #222; text-align: right; }
+  table.tbl th:first-child, table.tbl td:first-child { text-align: left; }
+  .drops { list-style: none; margin: 0 0 8px; padding: 0; font-size: 13px; }
+  .drops li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; border-bottom: 1px dotted #2a2a2a; }
+  .drops a { color: var(--text); }
+  .drops details { font-size: 12px; color: var(--text-dim); }
+  .drops summary { cursor: pointer; color: var(--text); }
+  .floorHead { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 2px; }
+  .quests { margin: 0; padding-left: 18px; font-size: 13px; }
+  .voiceBox { grid-column: 1 / -1; }
+  .voiceHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; border-bottom: 1px solid var(--panel-border); margin-bottom: 8px; }
+  .voiceHead h3.sub { border: 0; margin: 6px 0; padding: 0; }
+  .vrow { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0 0 8px; }
+  .vrow .lbl { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; min-width: 130px; }
+  .vbtn { background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 3px 9px; cursor: pointer; }
+  .vbtn:hover { border-color: var(--accent-bright); }
+  .vbtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lines { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 4px 16px; margin: 0 0 10px; }
+  .lines .vbtn { width: 100%; text-align: left; display: flex; gap: 8px; }
+  @media (max-width: 860px) { .dlg-body { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { header h1 { font-size: 24px; } .vrow .lbl { min-width: 100%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="jackals.html">Jackals</a><a href="bosses.html" aria-current="page">Bosses</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="materials.html">Materials</a><a href="mushrooms.html">Mushrooms</a></nav>
+  <header>
+    <h1>LET IT DIE <span>Bosses</span></h1>
+    <p>The four Dons who hold the Tower of Barbs' stamps, and the four mini bosses that roam its floors. Each Don fights from a Mk-2 version of one mini boss: Max Sharp rides COEN Mk-2, Colonel Jackson JIN-DIE Mk-2, Mr. Crowley GOTO-9 Mk-2 and Taro Gunkanyama U-10 Mk-2. Renders and a 3D view come from the game's own models; stats, floors and drops from its data.</p>
+  </header>
+
+  <div class="bar">
+    <div class="seg"><span class="lbl">View</span><div class="btns" id="view">
+      <button data-v="front" aria-pressed="true">Front</button><button data-v="angle" aria-pressed="false">Angle</button><button data-v="side" aria-pressed="false">Side</button><button data-v="back" aria-pressed="false">Back</button>
+    </div></div>
+  </div>
+
+  <h2 class="sectionHead">Dons</h2>
+  <p class="sectionNote">A Don waits at the end of each part of the Tower and on Tengoku's boss floors. Click one for its fight, its mount's stats, quests and voice.</p>
+  <div class="grid" id="dons"></div>
+
+  <h2 class="sectionHead">Mini bosses</h2>
+  <p class="sectionNote">The "3 Shock Terrors" COEN, JIN-DIE and GOTO-9, and U-10. Click one for its floors, stats at every level, drops, quests and voice, and to see its Mk-2 version.</p>
+  <div class="grid" id="minis"></div>
+
+  <footer>
+    <p>Data comes from the game's <code>master_mboss</code> tables: <code>MBOSS1</code> to <code>MBOSS4</code> are COEN, JIN-DIE, GOTO-9 and U-10, and <code>STAGE_BOSS1</code> to <code>STAGE_BOSS4</code> are the Mk-2 versions the Dons fight on (the kill quests pair each id with its name). HP, stats, EXP, Kill Coins and SPLithium are listed for every level the data defines; which level you meet depends on the floor (<code>master_floor</code> gives a mini-boss level per floor, shown with the floors). The Don fights are set up in each area's boss arena (<code>master_stage_mboss</code>); the data does not give the Don's own level for a Tower fight, only the Mk-2's levels. Tengoku's boss floors (every fifth floor) can hold any of them.</p>
+    <p>Drops: on each floor where a mini boss is set up, <code>master_floor_drop_gen</code> gives weights for what it leaves: a crafting material, a group of gear, or group 0, which names no group (what that gives is not clear from the data). Percentages are the weight over the total for that floor; Tengoku's are shown as the range over its floors. A gear group lists the pieces that belong to it; the data does not say how one is picked. The floors listed for a mini boss are the ones with a drop table for it, which is how the data says it can appear there.</p>
+    <p>Renders show each model in the first frame of its own neutral idle animation, framed to its size and lit outside the game engine, so colours are close to but not identical to in-game. The Dons' models are the parts that sit on their mounts (Gunkanyama's includes his battleship hat). The 3D view uses the same meshes with textures reduced to 1024 px. Voice: every clip the game has for each, in English and Japanese, as stored (Ogg Vorbis). A Don's set includes the sounds made while riding its mount; "Arena" lines are the scenes before and after the fight and "Fight" lines are spoken during it, with the game's subtitles. Voice cast is from the game's credits.</p>
+    <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
+  </footer>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-head">
+    <h2 id="d-name"></h2><span class="id" id="d-id"></span>
+    <div class="nav"><button id="d-prev" aria-label="Previous">&larr;</button><button id="d-next" aria-label="Next">&rarr;</button><button id="d-close">Close</button></div>
+  </div>
+  <div class="dlg-body">
+    <div>
+      <div class="lookBar">
+        <div class="seg"><div class="btns" id="d-look"></div></div>
+        <div class="seg"><div class="btns" id="d-mode" data-seg="mode"><button data-v="photos" aria-pressed="true">Photos</button><button data-v="3d" aria-pressed="false">3D</button></div></div>
+      </div>
+      <div class="views" id="d-views"></div>
+      <div class="stage3d" id="d-3d" hidden>
+        <div class="canvasBox"><canvas id="d-canvas"></canvas></div>
+        <div class="stageBar"><span class="id" id="d-3d-note"></span>
+          <div class="seg"><div class="btns" id="d-preset"><button data-v="body" aria-pressed="false">Whole model</button><button data-v="top" aria-pressed="false">Top</button></div></div>
+        </div>
+      </div>
+    </div>
+    <div id="d-info"></div>
+    <section class="voiceBox">
+      <div class="voiceHead"><h3 class="sub">Voice</h3>
+        <div class="seg"><div class="btns" id="d-lang" data-seg="lang"><button data-v="en" aria-pressed="true">English</button><button data-v="jp" aria-pressed="false">Japanese</button></div></div>
+        <span class="id" id="d-clip-note"></span></div>
+      <div id="d-voice"></div>
+    </section>
+  </div>
+</dialog>
+
+<script src="data/bosses.js"></script>
+<script src="data/bosses3d.js"></script>
+<script src="data/bossvoices.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const num = n => n == null ? '' : Number(n).toLocaleString('en-US');
+const VIEWS = { front: 'Front', angle: 'Angle', side: 'Side', back: 'Back' };
+const MINI = Object.fromEntries(BOSSES.minis.map(m => [m.id, m]));
+// every entry the dialog can open, Dons first; each has two models: [own, Mk-2 mount or version]
+const LIST = BOSSES.dons.map(d => ({ kind: 'don', d, models: [[d.id, d.name], [d.rides, d.rideName]] }))
+  .concat(BOSSES.minis.map(m => ({ kind: 'mini', d: m, models: [[m.id, m.name], [m.mk2, m.name + ' Mk-2']] })));
+const state = { view: 'front', mode: 'photos', lang: 'en', open: -1, model: 0, shown3d: '', voiceFor: '' };
+const img = (id, v) => `img/${id}_${v}.webp`;
+const range = (a, b) => a === b ? num(a) : `${num(a)}–${num(b)}`;
+const pct = p => p[0] === p[1] ? `${p[0]}%` : `${p[0]}–${p[1]}%`;
+
+function card(e, i) {
+  const d = e.d, id = e.models[0][0];
+  const sub = e.kind === 'don' ? `${d.area} boss, floor ${d.floor} · rides ${esc(d.rideName)}` : `${d.tower.length ? 'Floors ' + d.tower.map(t => t[0]).join(', ') : ''}${d.tengoku ? ' and Tengoku' : ''}`;
+  return `<button class="card" data-i="${i}"><div class="shot"><img loading="lazy" alt="${esc(d.name)} ${VIEWS[state.view].toLowerCase()} view" src="${img(id, state.view)}"></div>
+    <div class="meta"><div class="name">${esc(d.name)}</div><div class="id">${sub}</div><div class="id">Voice: ${esc(d.voice.en)} (English), ${esc(d.voice.jp)} (Japanese)</div></div></button>`;
+}
+function renderGrid() {
+  $('dons').innerHTML = LIST.map((e, i) => e.kind === 'don' ? card(e, i) : '').join('');
+  $('minis').innerHTML = LIST.map((e, i) => e.kind === 'mini' ? card(e, i) : '').join('');
+}
+// Tengoku floors: "every 5th floor from 55 to 450" when that is what they are
+function floorsText(fl) {
+  if (!fl.length) return '';
+  const step = fl.length > 2 && fl.every((f, k) => !k || f - fl[k - 1] === fl[1] - fl[0]) ? fl[1] - fl[0] : 0;
+  return step > 1 ? `every ${step}th floor from ${fl[0]} to ${fl[fl.length - 1]} (${fl.length} floors)` : fl.join(', ');
+}
+function statTable(levels) {
+  const kc = levels.some(l => l.kc), spl = levels.some(l => l.spl);
+  return `<div class="tbox"><table class="tbl"><tr><th>Level</th><th>HP</th><th>STR</th><th>DEX</th><th>VIT</th><th>STM</th><th>LUK</th><th>EXP</th>${kc ? '<th>Kill Coins</th>' : ''}${spl ? '<th>SPLithium</th>' : ''}</tr>` +
+    levels.map(l => `<tr><td>${l.lvl}</td><td>${num(l.hp)}</td><td>${num(l.str)}</td><td>${num(l.dex)}</td><td>${num(l.vit)}</td><td>${num(l.stm)}</td><td>${num(l.luk)}</td><td>${num(l.exp)}</td>` +
+      (kc ? `<td>${l.kc ? range(...l.kc) : ''}</td>` : '') + (spl ? `<td>${l.spl ? range(...l.spl) : ''}</td>` : '') + '</tr>').join('') + '</table></div>';
+}
+function dropItem(x) {
+  let name = esc(x.name);
+  if (x.kind === 'item') name = x.ids.map((id, k) => `<a href="materials.html#${id}">${esc(x.name.split(' / ')[k] || id)}</a>`).join(' / ');
+  if (x.kind === 'gear') name = `<details><summary>${esc(x.name)} (${x.names.length} pieces)</summary>${x.names.map(esc).join(', ')}</details>`;
+  return `<li><span>${name}</span><span>${pct(x.pct)}</span></li>`;
+}
+const questList = qs => qs.length ? `<ul class="quests">${qs.map(q => `<li>${esc(q.text)} <span class="dim">(from floor ${q.floor}; reward: ${esc(q.reward)})</span></li>`).join('')}</ul>` : '<p class="dim">None.</p>';
+
+function openEntry(i, model) {
+  state.open = i; if (model != null) state.model = model;
+  const e = LIST[i], d = e.d, [mid, mname] = e.models[state.model];
+  $('d-name').textContent = d.name;
+  $('d-id').textContent = e.kind === 'don' ? `${d.rides} (mount)` : d.id;
+  $('d-look').innerHTML = e.models.map(([, n], k) => `<button data-m="${k}" aria-pressed="${k === state.model}">${esc(n)}</button>`).join('');
+  $('d-views').innerHTML = Object.keys(VIEWS).map(v => `<figure><img alt="${esc(mname)} ${VIEWS[v].toLowerCase()} view" src="${img(mid, v)}"><figcaption>${VIEWS[v]}</figcaption></figure>`).join('');
+  let html = '';
+  if (e.kind === 'don') {
+    const m = MINI[d.mini];
+    html = `<dl><dt>Where</dt><dd>${esc(d.area)} boss arena, floor ${d.floor}; also Tengoku's boss floors</dd>
+      <dt>Fights on</dt><dd>${esc(d.rideName)} <span class="dim">(${d.rides}, a version of <a href="#${m.id}">${esc(m.name)}</a>)</span></dd>
+      <dt>Voice</dt><dd>${esc(d.voice.en)} (English), ${esc(d.voice.jp)} (Japanese)</dd></dl>
+      <h3 class="sub">${esc(d.rideName)}: stats by level</h3>${statTable(m.mk2levels)}
+      <h3 class="sub">Quests</h3>${questList(d.quests.concat(BOSSES.allQuests.slice(0, 1)))}`;
+  } else {
+    const t = d.tengoku;
+    html = `<dl><dt>Ids</dt><dd>${d.id}; Mk-2 version ${d.mk2}</dd>
+      <dt>Tower floors</dt><dd>${d.tower.map(([f, a, b, la, lb]) => `${f} <span class="dim">(level ${range(la, lb)}${b > 1 ? `, up to ${b} mini bosses` : ''})</span>`).join(', ') || 'none'}</dd>
+      ${t ? `<dt>Tengoku</dt><dd>${floorsText(t.floors)}, level ${range(...t.lvl)}</dd>` : ''}
+      <dt>Voice</dt><dd>${esc(d.voice.en)} (English), ${esc(d.voice.jp)} (Japanese)</dd></dl>
+      <h3 class="sub">${state.model ? esc(d.name) + ' Mk-2: stats' : 'Stats'} by level</h3>${statTable(state.model ? d.mk2levels : d.levels)}
+      <h3 class="sub">Drops</h3>` +
+      d.drops.tower.map(f => `<div class="floorHead">Floor ${f.floor}</div><ul class="drops">${f.drops.map(dropItem).join('')}</ul>`).join('') +
+      (d.drops.tengoku.length ? `<div class="floorHead">Tengoku</div><ul class="drops">${d.drops.tengoku.map(dropItem).join('')}</ul>` : '') +
+      `<h3 class="sub">Quests</h3>${questList(d.quests.concat(BOSSES.allQuests.slice(1)))}`;
+  }
+  $('d-info').innerHTML = html;
+  $('d-views').hidden = state.mode === '3d';
+  $('d-3d').hidden = state.mode !== '3d';
+  if (state.mode === '3d' && state.shown3d !== mid) { state.shown3d = mid; show3d(mid); }
+  const vkey = e.models[0][0] + state.lang;
+  if (state.voiceFor !== vkey) { state.voiceFor = vkey; stopClip(); renderVoice(e.models[0][0]); }
+  if (!$('dlg').open) $('dlg').showModal();
+  history.replaceState(null, '', '#' + mid);
+}
+function step(k) { openEntry((state.open + k + LIST.length) % LIST.length, 0); }
+
+// ---- Voice: voice/boss/<clip>_<en|jp>.ogg (tools/boss_voices.py) ----
+let playing = null, playingBtn = null;
+const label = k => k.replace(/^ATK_/, 'Attack ').replace(/^DMG/, 'Hurt').replace(/^IDL$/, 'Idle').replace(/_/g, ' ');
+function renderVoice(id) {
+  const v = BOSS_VOICES[id];
+  if (!v) { $('d-voice').innerHTML = '<p class="dim">No clips.</p>'; return; }
+  const combat = Object.keys(v.combat).sort().map(k => `<div class="vrow"><span class="lbl">${esc(label(k))}</span>` +
+    v.combat[k].map((c, i) => `<button class="vbtn" data-clip="${c}">&#9654; ${i + 1}</button>`).join('') + '</div>').join('');
+  const lines = ['arena', 'fight'].map(s => {
+    const ls = v.lines.filter(l => l.scene === s);
+    return ls.length ? `<div class="vrow"><span class="lbl">${s === 'arena' ? 'Arena, before and after' : 'Fight'}</span></div><div class="lines">` +
+      ls.map(l => `<button class="vbtn" data-clip="${l.clip}"><span class="dim">&#9654;</span><span>${esc(l[state.lang] || '(no subtitle)')}</span></button>`).join('') + '</div>' : '';
+  }).join('');
+  $('d-voice').innerHTML = lines + combat;
+}
+function stopClip() { if (playing) { playing.pause(); playing = null; } if (playingBtn) { playingBtn.classList.remove('on'); playingBtn = null; } }
+function playClip(btn) {
+  stopClip();
+  const a = playing = new Audio(`voice/boss/${btn.dataset.clip}_${state.lang}.ogg`);
+  playingBtn = btn; btn.classList.add('on');
+  a.addEventListener('ended', () => { if (playing === a) stopClip(); });
+  a.play().catch(() => { $('d-clip-note').textContent = 'This browser could not play the clip (Ogg Vorbis audio).'; stopClip(); });
+}
+
+// ---- 3D view: three.js is fetched the first time it is opened; mesh and textures per model on demand ----
+const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+let threeReady = null, v3 = null, v3Token = 0;
+function loadThree() {
+  return threeReady || (threeReady = new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = THREE_URL; s.onload = ok; s.onerror = () => { threeReady = null; fail(new Error('three.js did not load')); };
+    document.head.appendChild(s);
+  }));
+}
+function tex3d(name, srgb) {
+  const t = new THREE.TextureLoader().load(`model3d/${name}.webp`, () => { if (v3) v3.dirty = true; });
+  t.flipY = false; t.encoding = srgb ? THREE.sRGBEncoding : THREE.LinearEncoding; t.anisotropy = 8;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+function mat3d(grp) {
+  if (grp.kind === 'glass') return new THREE.MeshStandardMaterial({ color: 0x15181c, roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.7 });
+  const hair = grp.kind === 'hair';
+  const m = new THREE.MeshStandardMaterial({ roughness: hair ? 0.55 : 0.62, metalness: 0, map: tex3d(grp.d, true), normalMap: tex3d(grp.n, false), normalScale: new THREE.Vector2(1, -1) });
+  if (hair) {
+    m.alphaMap = tex3d(grp.a, false); m.alphaTest = 0.5; m.side = THREE.DoubleSide;
+    m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>' + String.fromCharCode(10) + 'gl_FragColor.a = 1.0;'); };
+  }
+  return m;
+}
+// mesh3d(): model3d/<name>.bin in pack3d.py's layout; big meshes ("i32") have uint32 indices. Centred over the origin.
+async function mesh3d(info) {
+  const res = await fetch(`model3d/${info.name}.bin`);
+  if (!res.ok) throw new Error(`mesh file missing: ${res.status}`);
+  const buf = await res.arrayBuffer(), n = info.verts;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf, 0, n * 3), 3));
+  g.setAttribute('normal', new THREE.InterleavedBufferAttribute(new THREE.InterleavedBuffer(new Int8Array(buf, n * 12, n * 4), 4), 3, 0, true));
+  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(buf, n * 16, n * 2), 2));
+  g.setIndex(new THREE.BufferAttribute(info.i32 ? new Uint32Array(buf, n * 24, info.indices) : new Uint16Array(buf, n * 24, info.indices), 1));
+  const mats = info.groups.map((grp, i) => { g.addGroup(grp.start, grp.count, i); return mat3d(grp); });
+  const mesh = new THREE.Mesh(g, mats);
+  mesh.position.set(-info.centre[0], 0, -info.centre[1]);
+  return mesh;
+}
+// camera presets from the model's size: the whole model, or its top quarter
+function presets(info) {
+  const h = info.max[1] - info.min[1], r = Math.hypot(info.max[0] - info.min[0], h, info.max[2] - info.min[2]) / 2;
+  const dist = r / Math.sin(15 * Math.PI / 180) * 1.05;
+  return { body: { ty: (info.min[1] + info.max[1]) / 2, dist }, top: { ty: info.max[1] - h * 0.15, dist: dist * 0.35 } };
+}
+function v3Init() {
+  const canvas = $('d-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x555560, 0.75));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9), rim = new THREE.DirectionalLight(0xbfd0ff, 0.5);
+  const camera = new THREE.PerspectiveCamera(30, 1, 1, 30000);
+  camera.add(key); camera.add(rim); key.position.set(120, 170, 300); rim.position.set(-200, 110, -250);
+  scene.add(camera);
+  v3 = { renderer, scene, camera, root: null, yaw: 0, pitch: 0, dirty: true, ty: 90, dist: 400, pre: null };
+  const ptrs = new Map(); let pinch = 0;
+  canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, e); pinch = 0; });
+  const up = e => { ptrs.delete(e.pointerId); pinch = 0; };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('pointermove', e => {
+    const prev = ptrs.get(e.pointerId);
+    if (!prev) return;
+    ptrs.set(e.pointerId, e);
+    if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      if (pinch) v3Zoom(pinch / d);
+      pinch = d;
+    } else if (e.shiftKey || (e.buttons & 2)) {
+      v3.ty += (e.clientY - prev.clientY) * v3.dist / 900;
+    } else {
+      v3.yaw -= (e.clientX - prev.clientX) * 0.008;
+      v3.pitch = Math.max(-1.2, Math.min(1.2, v3.pitch + (e.clientY - prev.clientY) * 0.006));
+    }
+    v3.dirty = true;
+  });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); v3Zoom(Math.exp(e.deltaY * 0.001)); }, { passive: false });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  new ResizeObserver(() => { v3.dirty = true; }).observe(canvas.parentElement);
+  (function frame() {
+    requestAnimationFrame(frame);
+    if (!v3.dirty || !$('dlg').open || state.mode !== '3d') return;
+    v3.dirty = false;
+    const w = canvas.parentElement.clientWidth, h = canvas.parentElement.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.near = v3.dist / 100; camera.far = v3.dist * 20; camera.updateProjectionMatrix();
+    const cp = Math.cos(v3.pitch);
+    camera.position.set(Math.sin(v3.yaw) * cp * v3.dist, v3.ty + Math.sin(v3.pitch) * v3.dist, Math.cos(v3.yaw) * cp * v3.dist);
+    camera.lookAt(0, v3.ty, 0);
+    renderer.render(scene, camera);
+  })();
+}
+function v3Zoom(f) { const b = v3.pre ? v3.pre.body.dist : 400; v3.dist = Math.max(b * 0.05, Math.min(b * 3, v3.dist * f)); v3.dirty = true; }
+function v3Preset(name) { if (v3 && v3.pre) Object.assign(v3, v3.pre[name], { yaw: 0, pitch: 0, dirty: true }); }
+function v3Clear() {
+  if (!v3 || !v3.root) return;
+  v3.root.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    for (const m of [].concat(o.material || [])) { for (const k of ['map', 'normalMap', 'alphaMap']) if (m[k]) m[k].dispose(); m.dispose(); }
+  });
+  v3.scene.remove(v3.root); v3.root = null;
+}
+async function show3d(id) {
+  const token = ++v3Token, note = $('d-3d-note'), info = BOSSES3D[id];
+  note.textContent = 'Loading 3D model…';
+  try {
+    await loadThree();
+    if (!v3) v3Init();
+    const root = new THREE.Group();
+    root.add(await mesh3d(info));
+    if (token !== v3Token) return;
+    v3Clear();
+    v3.root = root; v3.scene.add(root); v3.pre = presets(info); v3Preset('body');
+    note.textContent = 'Drag to rotate · scroll or pinch to zoom · shift-drag to move up and down';
+  } catch (err) {
+    if (token === v3Token) { note.textContent = 'The 3D view could not be loaded (' + err.message + ').'; state.shown3d = ''; }
+  }
+}
+
+function bindSeg(id, key) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state[key] = b.dataset.v;
+    for (const x of $(id).children) x.setAttribute('aria-pressed', String(x === b));
+    renderGrid();
+    if ($('dlg').open) openEntry(state.open);
+  });
+}
+bindSeg('view', 'view');
+bindSeg('d-mode', 'mode');
+bindSeg('d-lang', 'lang');
+$('d-look').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) openEntry(state.open, +b.dataset.m); });
+for (const g of ['dons', 'minis']) $(g).addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openEntry(+c.dataset.i, 0); });
+$('d-voice').addEventListener('click', e => { const b = e.target.closest('[data-clip]'); if (b) playClip(b); });
+$('d-preset').addEventListener('click', e => { const b = e.target.closest('button'); if (b) v3Preset(b.dataset.v); });
+const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
+const closeDlg = () => { stopClip(); $('dlg').close(); clearHash(); };
+$('d-close').addEventListener('click', closeDlg);
+$('d-prev').addEventListener('click', () => step(-1));
+$('d-next').addEventListener('click', () => step(1));
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) closeDlg(); });
+$('dlg').addEventListener('close', () => { stopClip(); clearHash(); });
+$('dlg').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
+// #DON_MAX, #MBOSS1 or #STAGE_BOSS1 (a mini boss's Mk-2) in the address opens it
+function openFromHash() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  const i = LIST.findIndex(e => e.models[0][0] === h);
+  if (i >= 0) return openEntry(i, 0);
+  const j = LIST.findIndex(e => e.kind === 'mini' && e.models[1][0] === h);
+  if (j >= 0) openEntry(j, 1);
+}
+window.addEventListener('hashchange', openFromHash);
+renderGrid();
+openFromHash();
+</script>
+</body>
+</html>

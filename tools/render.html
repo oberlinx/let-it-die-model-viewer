@@ -143,6 +143,7 @@ const VIEWS = {
   wide: { target: [0, 91, 0], dist: 400, w: 800, h: 800, fov: 28 },
   thumb: { target: [0, 167.5, 0], dist: 70, w: 480, h: 480, fov: 30 },
   body: { target: [0, 90, 0], dist: 400, w: 400, h: 800, fov: 28 },
+  fit: { w: 600, h: 600, fov: 28, fit: true },       // framed to the posed model's bounds (bosses)
 };
 async function show(id, view, yaw, nomask) {
   const m = models.find(x => x.id === id);
@@ -153,9 +154,19 @@ async function show(id, view, yaw, nomask) {
   const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(120, 260, 300); scene.add(key);
   const rim = new THREE.DirectionalLight(0xbfd0ff, 0.5); rim.position.set(-200, 200, -250); scene.add(rim);
   const root = new THREE.Group(); scene.add(root);
-  root.add(await buildMesh(m.body, { kind: /^JACKAL_/.test(m.id) ? 'jackal' : 'body', model: m, nomask: nomask || Q.has('nomask') }));
+  root.add(await buildMesh(m.body, { kind: Q.get('set') ? 'jackal' : 'body', model: m, nomask: nomask || Q.has('nomask') }));
   if (m.hair && !Q.has('nohair')) root.add(await buildMesh(m.hair, { kind: 'hair', model: m }));
   root.rotation.y = (yaw || 0) * Math.PI / 180;
+  if (v.fit) {
+    // centre the model over the origin, turn it, and back the camera off until its bounding sphere fits
+    const lo = m.pose.min, hi = m.pose.max, c = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+    root.children.forEach(o => o.position.set(-c[0], 0, -c[2]));
+    const r = Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) / 2, dist = r / Math.sin(v.fov * Math.PI / 360) * 1.02;
+    camera = new THREE.PerspectiveCamera(v.fov, v.w / v.h, dist / 100, dist * 10);
+    camera.position.set(0, c[1] + dist * 0.12, dist); camera.lookAt(0, c[1], 0);
+    renderer.render(scene, camera);
+    return m.label;
+  }
   camera = new THREE.PerspectiveCamera(v.fov, v.w / v.h, 1, 2000);
   // posed models: aim head shots at the posed head bone, from slightly below because the idle stance looks down
   const head = POSED && m.pose && /face|thumb/.test(view || '') ? m.pose.head : null;
@@ -385,32 +396,40 @@ async function renderAll() {
   }
   await fetch('/save/done.png', { method: 'POST', body: 'x' });
 }
-// ---- Jackals (?set=jackals, from jackal_models.py): page photos, and textures for the 3D view ----
-async function renderJackals() {
+// ---- Enemy sets (?set=jackals or ?set=bosses, from enemy_models.py): page photos, and textures for the 3D view ----
+// Jackals are fighter-sized and get the fighters' face and body shots. Bosses vary from a head to a building-sized
+// creature, so each of their shots is framed to the posed model's bounds (the 'fit' view).
+async function renderSet() {
   for (const k in VIEWS) { VIEWS[k].w *= 2; VIEWS[k].h *= 2; }
   for (const m of models) {
     for (const k in texCache) delete texCache[k];
-    await show(m.id, 'face', 0); await saveScaled(m.id + '_face.webp', 2);
-    await show(m.id, 'face', 35); await saveScaled(m.id + '_side.webp', 2);
-    await show(m.id, 'body', 0); await saveScaled(m.id + '_body.webp', 2);
-    await show(m.id, 'body', 180); await saveScaled(m.id + '_back.webp', 2);
+    if (/^JACKAL_/.test(m.id)) {
+      await show(m.id, 'face', 0); await saveScaled(m.id + '_face.webp', 2);
+      await show(m.id, 'face', 35); await saveScaled(m.id + '_side.webp', 2);
+      await show(m.id, 'body', 0); await saveScaled(m.id + '_body.webp', 2);
+      await show(m.id, 'body', 180); await saveScaled(m.id + '_back.webp', 2);
+    } else {
+      for (const [tag, yaw] of [['front', 0], ['angle', 35], ['side', 90], ['back', 180]]) { await show(m.id, 'fit', yaw); await saveScaled(m.id + '_' + tag + '.webp', 2); }
+    }
   }
   for (const k in VIEWS) { VIEWS[k].w /= 2; VIEWS[k].h /= 2; }
   await fetch('/save/done.png', { method: 'POST', body: 'x' });
 }
-// One texture set per mesh section, named after its material without the MI_ prefix (jackal_models.py --pack uses the
+// One texture set per mesh section, named after its material without the MI_ prefix (enemy_models.py --pack uses the
 // same names). Hair gets its opacity (the mask map's red channel) as a separate _A image; the visor glass has none.
-async function bakeJackalTextures(size) {
+// A section without a normal map the harness can read gets a flat one.
+async function bakeSetTextures(size) {
   const opaque = im => { const o = new Uint8Array(im.data); for (let i = 3; i < o.length; i += 4) o[i] = 255; return toCanvas({ w: im.w, h: im.h, data: o }); };
+  const flat = () => { const c = document.createElement('canvas'); c.width = c.height = 4; const x = c.getContext('2d'); x.fillStyle = '#8080ff'; x.fillRect(0, 0, 4, 4); return c; };
   const done = new Set();
   for (const m of models) {
     for (const k in texCache) delete texCache[k];
     for (const g of m.body.groups) {
       const mt = g.material, name = mt.name.replace(/^MI_/, '');
-      if (/_Glass$/.test(mt.name) || done.has(name)) continue;
+      if (/_Glass$|CutSurface/.test(mt.name) || done.has(name)) continue;
       done.add(name);
       await postScaled(name + '_D', opaque(await loadImage(mt.tex.DiffuseMap.file)), size, 0.86);
-      await postScaled(name + '_N', opaque(await loadImage(mt.tex.NormalMap.file)), size, 0.88);
+      await postScaled(name + '_N', mt.tex.NormalMap ? opaque(await loadImage(mt.tex.NormalMap.file)) : flat(), size, 0.88);
       if (/_Hair/.test(mt.parent || '')) {
         const mk = await loadImage(mt.tex.MaskMap.file), al = new Uint8Array(mk.data.length);
         for (let o = 0; o < al.length; o += 4) { al[o] = al[o + 1] = al[o + 2] = mk.data[o]; al[o + 3] = 255; }
