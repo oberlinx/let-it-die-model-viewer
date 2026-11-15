@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="website">
 <meta property="og:title" content="LET IT DIE Bosses">
-<meta property="og:description" content="The four Dons and the four mini bosses with their Mk-2 versions: where they appear, stats per level, drops, renders, a 3D view and every voice clip.">
+<meta property="og:description" content="The four Dons, the four mini bosses with their Mk-2 versions and the 4 FORCEMEN: where they appear, stats per level, drops, renders, a 3D view and every voice clip.">
 <meta property="og:image" content="https://oberlinx.github.io/let-it-die-model-viewer/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="description" content="LET IT DIE's Dons (Max Sharp, Colonel Jackson, Mr. Crowley, Taro Gunkanyama) and mini bosses (COEN, JIN-DIE, GOTO-9, U-10): stats, floors, drops, renders, 3D view and voices.">
@@ -88,6 +88,11 @@
   .drops summary { cursor: pointer; color: var(--text); }
   .floorHead { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 2px; }
   .quests { margin: 0; padding-left: 18px; font-size: 13px; }
+  .mails { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+  .mail { background: var(--panel); border: 1px solid var(--panel-border); padding: 12px 14px; font-size: 13px; color: var(--text-dim); }
+  .mail h3 { font-family: var(--display); font-size: 17px; color: var(--text); margin: 0 0 6px; }
+  .mail p { margin: 0 0 8px; }
+  td.low { color: #7fc77f; }
   .voiceBox { grid-column: 1 / -1; }
   .voiceHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; border-bottom: 1px solid var(--panel-border); margin-bottom: 8px; }
   .voiceHead h3.sub { border: 0; margin: 6px 0; padding: 0; }
@@ -107,7 +112,7 @@
   <nav class="pages"><a href="./">Home</a><a href="models.html">Fighter Models</a><a href="jackals.html">Jackals</a><a href="bosses.html" aria-current="page">Bosses</a><a href="decals.html">Skill Decals</a><a href="gear.html">Gear</a><a href="materials.html">Materials</a><a href="mushrooms.html">Mushrooms</a></nav>
   <header>
     <h1>LET IT DIE <span>Bosses</span></h1>
-    <p>The four Dons who hold the Tower of Barbs' stamps, and the four mini bosses that roam its floors. Each Don fights from a Mk-2 version of one mini boss: Max Sharp rides COEN Mk-2, Colonel Jackson JIN-DIE Mk-2, Mr. Crowley GOTO-9 Mk-2 and Taro Gunkanyama U-10 Mk-2. Renders and a 3D view come from the game's own models; stats, floors and drops from its data.</p>
+    <p>The four Dons who hold the Tower of Barbs' stamps, the four mini bosses that roam its floors, and the 4 FORCEMEN who wait in arenas of their own. Each Don fights from a Mk-2 version of one mini boss: Max Sharp rides COEN Mk-2, Colonel Jackson JIN-DIE Mk-2, Mr. Crowley GOTO-9 Mk-2 and Taro Gunkanyama U-10 Mk-2. Renders and a 3D view come from the game's own models; stats, floors and drops from its data.</p>
   </header>
 
   <div class="bar">
@@ -124,10 +129,16 @@
   <p class="sectionNote">The "3 Shock Terrors" COEN, JIN-DIE and GOTO-9, and U-10. Click one for its floors, stats at every level, drops, quests and voice, and to see its Mk-2 version.</p>
   <div class="grid" id="minis"></div>
 
+  <h2 class="sectionHead">4 FORCEMEN</h2>
+  <p class="sectionNote">White Steel, Red Napalm, Black Thunder and Pale Wind, each in an arena of its own on three floors of its part of the Tower: Normal, Hard and Nightmare. Click one for its arena floors, stats at every level, damage taken by weapon, gear, quests and voice, and to see its Hell look.</p>
+  <div class="grid" id="ffm"></div>
+  <div class="mails" id="ffm-mails"></div>
+
   <footer>
     <p>Data comes from the game's <code>master_mboss</code> tables: <code>MBOSS1</code> to <code>MBOSS4</code> are COEN, JIN-DIE, GOTO-9 and U-10, and <code>STAGE_BOSS1</code> to <code>STAGE_BOSS4</code> are the Mk-2 versions the Dons fight on (the kill quests pair each id with its name). HP, stats, EXP, Kill Coins and SPLithium are listed for every level the data defines; which level you meet depends on the floor (<code>master_floor</code> gives a mini-boss level per floor, shown with the floors). The Don fights are set up in each area's boss arena (<code>master_stage_mboss</code>); the data does not give the Don's own level for a Tower fight, only the Mk-2's levels. Tengoku's boss floors (every fifth floor) can hold any of them.</p>
     <p>Drops: on each floor where a mini boss is set up, <code>master_floor_drop_gen</code> gives weights for what it leaves: a crafting material, a group of gear, or group 0, which names no group (what that gives is not clear from the data). Percentages are the weight over the total for that floor; Tengoku's are shown as the range over its floors. A gear group lists the pieces that belong to it; the data does not say how one is picked. The floors listed for a mini boss are the ones with a drop table for it, which is how the data says it can appear there.</p>
     <p>Renders show each model in the first frame of its own neutral idle animation, framed to its size and lit outside the game engine, so colours are close to but not identical to in-game. The Dons' models are the parts that sit on their mounts (Gunkanyama's includes his battleship hat). The 3D view uses the same meshes with textures reduced to 1024 px. Voice: every clip the game has for each, in English and Japanese, as stored (Ogg Vorbis). A Don's set includes the sounds made while riding its mount; "Arena" lines are the scenes before and after the fight and "Fight" lines are spoken during it, with the game's subtitles. Voice cast is from the game's credits.</p>
+    <p>4 FORCEMEN: <code>master_stage_fourforcemen</code> puts each in three arenas of its part of the Tower, at levels 1, 2 and 3; the areas holding them use the normal, HARD and EXPART arena scripts and sit on the floors shown, which match the game's Normal, Hard and Nightmare quests. Levels 4 to 8 are also defined in <code>master_fourforcemen_param_int</code>; the data also has a fourth arena per stage at level 0, which may be the Hell or Tengoku version, but which of those levels it uses is not stated. Attack and defence factors are the game's ATKUP and DEFUP values as stored. They have no character model of their own: in the game each is a fighter wearing its armour set, so the renders put the set (or its Hell version) on the Male 1 body; their weapons are on the gear page. Only Red Napalm's voice actor is named in the credits.</p>
     <p>Unofficial fan page. LET IT DIE and its character art belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -164,6 +175,8 @@
 <script src="data/bosses.js"></script>
 <script src="data/bosses3d.js"></script>
 <script src="data/bossvoices.js"></script>
+<script src="data/forcemen.js"></script>
+<script src="data/forcemen3d.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -172,7 +185,10 @@ const VIEWS = { front: 'Front', angle: 'Angle', side: 'Side', back: 'Back' };
 const MINI = Object.fromEntries(BOSSES.minis.map(m => [m.id, m]));
 // every entry the dialog can open, Dons first; each has two models: [own, Mk-2 mount or version]
 const LIST = BOSSES.dons.map(d => ({ kind: 'don', d, models: [[d.id, d.name], [d.rides, d.rideName]] }))
-  .concat(BOSSES.minis.map(m => ({ kind: 'mini', d: m, models: [[m.id, m.name], [m.mk2, m.name + ' Mk-2']] })));
+  .concat(BOSSES.minis.map(m => ({ kind: 'mini', d: m, models: [[m.id, m.name], [m.mk2, m.name + ' Mk-2']] })))
+  .concat(FORCEMEN.forcemen.map(f => ({ kind: 'ffm', d: f, models: [[f.id, f.name], [f.id + '_HELL', f.name + ' (Hell)']] })));
+const MESH3D = Object.assign({}, BOSSES3D, FORCEMEN3D);
+const LEVEL_MODE = { 1: 'Normal', 2: 'Hard', 3: 'Nightmare' };
 const state = { view: 'front', mode: 'photos', lang: 'en', open: -1, model: 0, shown3d: '', voiceFor: '' };
 const img = (id, v) => `img/${id}_${v}.webp`;
 const range = (a, b) => a === b ? num(a) : `${num(a)}–${num(b)}`;
@@ -180,13 +196,31 @@ const pct = p => p[0] === p[1] ? `${p[0]}%` : `${p[0]}–${p[1]}%`;
 
 function card(e, i) {
   const d = e.d, id = e.models[0][0];
-  const sub = e.kind === 'don' ? `${d.area} boss, floor ${d.floor} · rides ${esc(d.rideName)}` : `${d.tower.length ? 'Floors ' + d.tower.map(t => t[0]).join(', ') : ''}${d.tengoku ? ' and Tengoku' : ''}`;
+  const sub = e.kind === 'don' ? `${d.area} boss, floor ${d.floor} · rides ${esc(d.rideName)}`
+    : e.kind === 'ffm' ? `${d.area} arena, floors ${Object.values(d.floors).join(', ')}`
+    : `${d.tower.length ? 'Floors ' + d.tower.map(t => t[0]).join(', ') : ''}${d.tengoku ? ' and Tengoku' : ''}`;
+  const voice = e.kind === 'ffm' ? (d.voice ? `Voice: ${esc(d.voice)}` : '') : `Voice: ${esc(d.voice.en)} (English), ${esc(d.voice.jp)} (Japanese)`;
   return `<button class="card" data-i="${i}"><div class="shot"><img loading="lazy" alt="${esc(d.name)} ${VIEWS[state.view].toLowerCase()} view" src="${img(id, state.view)}"></div>
-    <div class="meta"><div class="name">${esc(d.name)}</div><div class="id">${sub}</div><div class="id">Voice: ${esc(d.voice.en)} (English), ${esc(d.voice.jp)} (Japanese)</div></div></button>`;
+    <div class="meta"><div class="name">${esc(d.name)}</div><div class="id">${sub}</div><div class="id">${voice}</div></div></button>`;
 }
 function renderGrid() {
-  $('dons').innerHTML = LIST.map((e, i) => e.kind === 'don' ? card(e, i) : '').join('');
-  $('minis').innerHTML = LIST.map((e, i) => e.kind === 'mini' ? card(e, i) : '').join('');
+  for (const [el, kind] of [['dons', 'don'], ['minis', 'mini'], ['ffm', 'ffm']]) $(el).innerHTML = LIST.map((e, i) => e.kind === kind ? card(e, i) : '').join('');
+}
+// Forcemen: stats per level (levels 1-3 are the Normal, Hard and Nightmare arenas), damage taken per weapon, gear
+function ffmLevels(f) {
+  return `<div class="tbox"><table class="tbl"><tr><th>Level</th><th>HP</th><th>STR</th><th>DEX</th><th>VIT</th><th>LUK</th><th>EXP</th><th>Attack factor</th><th>Defence factor</th></tr>` +
+    f.levels.map(l => `<tr><td>${l.lvl}${LEVEL_MODE[l.lvl] ? ` <span class="dim">${LEVEL_MODE[l.lvl]}</span>` : ''}</td><td>${num(l.hp)}</td><td>${num(l.str)}</td><td>${num(l.dex)}</td><td>${num(l.vit)}</td><td>${num(l.luk)}</td><td>${num(l.exp)}</td><td>${num(l.atkup)}</td><td>${num(l.defup)}</td></tr>`).join('') + '</table></div>';
+}
+function ffmDamage(f) {
+  const lv = f.levels.map(l => l.lvl);
+  return `<div class="tbox"><table class="tbl"><tr><th>Weapon</th>${lv.map(l => `<th>Lv ${l}</th>`).join('')}</tr>` +
+    Object.entries(f.damage).map(([w, v]) => `<tr><td>${esc(w)}</td>${v.map(x => x == null ? '<td class="dim">–</td>' : `<td class="${x < 100 ? 'low' : ''}">${x}%</td>`).join('')}</tr>`).join('') + '</table></div>';
+}
+const gearLinks = g => `<dd>${g.weapons.map(w => `<a href="gear.html#${w.id}">${esc(w.name)}</a>`).join(', ')}<br>${g.armor.map(a => `<a href="gear.html#${a.id}">${esc(a.name)}</a>`).join(', ')}</dd>`;
+function renderMails() {
+  $('ffm-mails').innerHTML = FORCEMEN.mails.map(m => `<div class="mail"><h3>${esc(m.title)}</h3>` +
+    m.text.split(/\n[\s　]*\n/).map(p => `<p>${esc(p.replace(/\s*\n\s*/g, ' ').trim())}</p>`).join('') + '</div>').join('') +
+    `<div class="mail"><h3>The arena's rules</h3>${FORCEMEN.rules.map(r => `<p>${esc(r)}</p>`).join('')}</div>`;
 }
 // Tengoku floors: "every 5th floor from 55 to 450" when that is what they are
 function floorsText(fl) {
@@ -206,7 +240,7 @@ function dropItem(x) {
   if (x.kind === 'gear') name = `<details><summary>${esc(x.name)} (${x.names.length} pieces)</summary>${x.names.map(esc).join(', ')}</details>`;
   return `<li><span>${name}</span><span>${pct(x.pct)}</span></li>`;
 }
-const questList = qs => qs.length ? `<ul class="quests">${qs.map(q => `<li>${esc(q.text)} <span class="dim">(from floor ${q.floor}; reward: ${esc(q.reward)})</span></li>`).join('')}</ul>` : '<p class="dim">None.</p>';
+const questList = qs => qs.length ? `<ul class="quests">${qs.map(q => `<li>${esc(q.text)} <span class="dim">(from floor ${q.floor}; reward: ${esc(q.reward)}${q.again && q.again !== q.reward ? `, then ${esc(q.again)} on repeats` : ''})</span></li>`).join('')}</ul>` : '<p class="dim">None.</p>';
 
 function openEntry(i, model) {
   state.open = i; if (model != null) state.model = model;
@@ -216,7 +250,15 @@ function openEntry(i, model) {
   $('d-look').innerHTML = e.models.map(([, n], k) => `<button data-m="${k}" aria-pressed="${k === state.model}">${esc(n)}</button>`).join('');
   $('d-views').innerHTML = Object.keys(VIEWS).map(v => `<figure><img alt="${esc(mname)} ${VIEWS[v].toLowerCase()} view" src="${img(mid, v)}"><figcaption>${VIEWS[v]}</figcaption></figure>`).join('');
   let html = '';
-  if (e.kind === 'don') {
+  if (e.kind === 'ffm') {
+    const black = d.type === 'blackthunder' ? `<dt>Special rule</dt><dd>Every 30 seconds one of: ${FORCEMEN.blackThunderRules.map(esc).join(', ')} (from the game's mail)</dd>` : '';
+    html = `<dl><dt>Arena</dt><dd>${esc(d.area)}: ${Object.entries(d.floors).map(([m, f]) => `${m} on floor ${f}`).join(', ')}</dd>${black}
+      <dt>Gear</dt>${gearLinks(d.gear)}<dt>Hell gear</dt>${gearLinks(d.hell)}
+      ${d.voice ? `<dt>Voice</dt><dd>${esc(d.voice)}</dd>` : ''}<dt>Id</dt><dd>${d.type}</dd></dl>
+      <h3 class="sub">Stats by level</h3>${ffmLevels(d)}
+      <h3 class="sub">Damage taken by weapon</h3><p class="id" style="margin:0 0 6px;">Share of normal damage per level; weapons not listed take 100%.</p>${ffmDamage(d)}
+      <h3 class="sub">Quests</h3>${questList(d.quests.concat([FORCEMEN.allQuest]))}`;
+  } else if (e.kind === 'don') {
     const m = MINI[d.mini];
     html = `<dl><dt>Where</dt><dd>${esc(d.area)} boss arena, floor ${d.floor}; also Tengoku's boss floors</dd>
       <dt>Fights on</dt><dd>${esc(d.rideName)} <span class="dim">(${d.rides}, a version of <a href="#${m.id}">${esc(m.name)}</a>)</span></dd>
@@ -377,7 +419,7 @@ function v3Clear() {
   v3.scene.remove(v3.root); v3.root = null;
 }
 async function show3d(id) {
-  const token = ++v3Token, note = $('d-3d-note'), info = BOSSES3D[id];
+  const token = ++v3Token, note = $('d-3d-note'), info = MESH3D[id];
   note.textContent = 'Loading 3D model…';
   try {
     await loadThree();
@@ -423,11 +465,12 @@ function openFromHash() {
   const h = decodeURIComponent(location.hash.slice(1));
   const i = LIST.findIndex(e => e.models[0][0] === h);
   if (i >= 0) return openEntry(i, 0);
-  const j = LIST.findIndex(e => e.kind === 'mini' && e.models[1][0] === h);
+  const j = LIST.findIndex(e => e.models[1][0] === h);
   if (j >= 0) openEntry(j, 1);
 }
 window.addEventListener('hashchange', openFromHash);
 renderGrid();
+renderMails();
 openFromHash();
 </script>
 </body>

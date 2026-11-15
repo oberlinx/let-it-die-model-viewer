@@ -7,6 +7,7 @@ The clips are spread over many localized packages (LOC_INT for English, LOC_JPN 
 packages, the bosses' animation packages and the boss stages. Every package is searched and each clip is taken once:
   SNW_VOX_CH_BB0<n>_*   Don n's combat voice (1 Max Sharp, 2 Colonel Jackson, 3 Mr. Crowley, 4 Taro Gunkanyama)
   SNW_VOX_CH_MB0<n>_*   mini boss n's voice (1 COEN, 2 JIN-DIE, 3 GOTO-9, 4 U-10)
+  SNW_VOX_CH_4H_<x>_*   the 4 FORCEMEN's voices (W White Steel, R Red Napalm, B Black Thunder, P Pale Wind)
   SNW_VOX_BS_*          a Don's lines during the fight; text in master_text section BS_<scene>, id <speaker>_<nnnn>
   SNW_VOX_JS_*          a Don's arena scene before and after the fight, one clip per scene; text is the whole section
 The speaker ids are MAXXX, JACKS, CROWL and GUNKA. Clips are written to voice/boss/<clip>_<en|jp>.ogg.
@@ -34,7 +35,8 @@ def ogg(p, e):
     assert bytes(data[:4]) == b'OggS', e['name']
     return bytes(data)
 
-PAT = re.compile(r'^SNW_VOX_(CH_BB0[1-4]_|CH_MB0[1-4]_|BS_\d\d_\d\d|JS_\d\d)')
+PAT = re.compile(r'^SNW_VOX_(CH_BB0[1-4]_|CH_MB0[1-4]_|CH_4H_[BRWP]_|BS_\d\d_\d\d|JS_\d\d)')
+FFM = {'W': 'FFM_WHITESTEEL', 'R': 'FFM_REDNAPALM', 'B': 'FFM_BLACKTHUNDER', 'P': 'FFM_PALEWIND'}
 got = {'en': set(), 'jp': set()}; total = 0
 for f in sorted(os.listdir(upk.GAME)):
     m = re.search(r'_LOC_(INT|JPN)\.upk$', f)
@@ -52,6 +54,9 @@ missing = sorted(got['en'] ^ got['jp'])
 out = collections.defaultdict(lambda: dict(combat={}, lines=[]))
 for n in names:
     key = n[len('SNW_VOX_'):]
+    m = re.match(r'CH_4H_([BRWP])_(.+?)_?(\d+)?$', key)
+    if m:
+        out[FFM[m.group(1)]]['combat'].setdefault(m.group(2), []).append(key); continue
     m = re.match(r'CH_(BB|MB)0(\d)_(.+?)_?(\d+)?$', key)
     if m:
         who = ('DON_' + ['MAX', 'JACKSON', 'CROWLEY', 'GUNKANYAMA'][int(m.group(2)) - 1]) if m.group(1) == 'BB' else 'MBOSS' + m.group(2)

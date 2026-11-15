@@ -2,7 +2,7 @@
 
 Usage: enemy_models.py <set> <dump-dir>
        enemy_models.py <set> <dump-dir> --pack <shots-dir> <model3d-dir> <js-file>
-<set> is 'jackals' or 'bosses'.
+<set> is 'jackals', 'bosses' or 'forcemen'.
 
 The first form writes each mesh with extract.py's functions, poses it with pose.py's using one frame of its own idle
 animation, and writes <set>.json (same shape as models.json, one entry per mesh) into the dump directory. Serve the dump
@@ -41,6 +41,15 @@ SETS = {   # id: (label, package prefix, mesh, animation packages, idle sequence
         ('STAGE_BOSS3', 'GOTO-9 Mk-2', 'CH_MidBoss_No03_Boss', 'SK_CH_MidBoss_No03_Boss', MID(3), 'ANI_CH_IDL_Neutral_01'),
         ('STAGE_BOSS4', 'U-10 Mk-2', 'CH_MidBoss_No04_Boss', 'SK_CH_MidBoss_No04_Boss01', MID(4), 'ANI_CH_IDL_Neutral_01'),
     ],
+    # The 4 FORCEMEN have no character mesh of their own: each is a fighter wearing its armour set. Shown here on the
+    # Male 1 body with the set (021) or its Hell version (022), posed with the fighters' neutral idle. <prefix> is then
+    # the name of the merged mesh, and <mesh> the list of parts.
+    'forcemen': [(fid + sfx, label + tag, 'FFM_%s%s' % (fid[4:], sfx), [('CH_Main_NormalMale', 'SK_CH_Main_NormalMale')] +
+                  [('CH_Equip_NM_%s_%s%s' % (s, part, num), 'SK_CH_Equip_NM_%s_%s%s' % (s, part, num)) for part in ('Btm0', 'Tops0', 'Head0')],
+                  FIGHTER['male'], 'ANI_CH_IDL_Neutral')
+                 for fid, label, s in (('FFM_WHITESTEEL', 'White Steel', 'DIY'), ('FFM_REDNAPALM', 'Red Napalm', 'MIL'),
+                                       ('FFM_BLACKTHUNDER', 'Black Thunder', 'FAN'), ('FFM_PALEWIND', 'Pale Wind', 'SPO'))
+                 for sfx, tag, num in (('', '', '021'), ('_HELL', ' (Hell)', '121'))],
 }
 
 if sys.argv[3:4] == ['--pack']:
@@ -90,15 +99,41 @@ if sys.argv[3:4] == ['--pack']:
 sys.argv = [sys.argv[0], D]        # extract.py and pose.py read the dump directory from argv[1]
 import extract, pose
 pose.D = D
+def load(name, kind, t):
+    a = array(t); a.frombytes(open(os.path.join(D, '%s.%s.bin' % (name, kind)), 'rb').read()); return a
+
+def composite(name, parts, anim):
+    """Pose several meshes that share a skeleton (a fighter body and the armour worn over it) and write them as one
+    mesh <name>, in the same files extract.py and pose.py write. The body's gas mask is left out (the helmet covers it)."""
+    infos = [extract.export_mesh('%s.Meshes.%s' % p) for p in parts]
+    bw = None
+    arrs = {k: array('f') for k in ('pos', 'nrm', 'uv', 'pose.pos', 'pose.nrm')}; idx = array('I'); groups = []
+    for info in infos:
+        w, _ = pose.pose_mesh(info, None, anim); bw = bw or w
+        base = len(arrs['pos']) // 3
+        for k in arrs: arrs[k].extend(load(info['name'], k, 'f'))
+        src = load(info['name'], 'idx', 'I')
+        for g in info['groups']:
+            if g.get('part') == 'mask': continue
+            groups.append(dict(g, start=len(idx)))
+            idx.extend(array('I', (i + base for i in src[g['start']:g['start'] + g['count']])))
+    for k, a in arrs.items(): a.tofile(open(os.path.join(D, '%s.%s.bin' % (name, k)), 'wb'))
+    idx.tofile(open(os.path.join(D, name + '.idx.bin'), 'wb'))
+    p = arrs['pose.pos']
+    return dict(name=name, verts=len(p) // 3, bones=infos[0]['bones'], groups=groups), bw, p
+
 anims = {}
 models = []
 for mid, label, prefix, mesh, packs, seq in SETS[SET]:
-    body = extract.export_mesh('%s.Meshes.%s' % (prefix, mesh))
     key = (packs, seq)
     if key not in anims:
         pose.ANIMS[packs] = packs
         anims[key] = pose.read_sequence(packs, seq)
-    bw, op = pose.pose_mesh(body, None, anims[key])
+    if isinstance(mesh, list):
+        body, bw, op = composite(prefix, mesh, anims[key])
+    else:
+        body = extract.export_mesh('%s.Meshes.%s' % (prefix, mesh))
+        bw, op = pose.pose_mesh(body, None, anims[key])
     names = {b[0] for b in body['bones']}
     print(label, 'bones animated', len(names & set(anims[key])), 'of', len(names))
     h = bw.get('HeadJT') or bw.get('headJT'); ys = op[1::3]

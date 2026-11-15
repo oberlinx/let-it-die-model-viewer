@@ -510,8 +510,8 @@ if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.has
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/%s_face.webp"></div>' % i for i in ('BODY_FEMALE_001', 'BODY_MALE_004', 'BODY_FEMALE_007', 'BODY_MALE_008'))}</div></a>
     <a class="section" href="jackals.html"><h2>Jackals</h2><p>Jackals X, Y and Z in all 15 tiers: stats, gear, drop odds, damage taken, renders and a 3D view.</p>
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/%s_face.webp"></div>' % i for i in ('JACKAL_X', 'JACKAL_Y', 'JACKAL_Z', 'JACKAL_Z002'))}</div></a>
-    <a class="section" href="bosses.html"><h2>Bosses</h2><p>The four Dons and the four mini bosses with their Mk-2 versions: floors, stats per level, drops, renders, a 3D view and voices.</p>
-      <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/%s_front.webp"></div>' % i for i in ('DON_MAX', 'DON_CROWLEY', 'MBOSS3', 'STAGE_BOSS1'))}</div></a>
+    <a class="section" href="bosses.html"><h2>Bosses</h2><p>The four Dons, the four mini bosses with their Mk-2 versions and the 4 FORCEMEN: floors, stats per level, drops, renders, a 3D view and voices.</p>
+      <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/%s_front.webp"></div>' % i for i in ('DON_MAX', 'DON_CROWLEY', 'MBOSS3', 'FFM_BLACKTHUNDER'))}</div></a>
     <a class="section" href="decals.html"><h2>Skill Decals</h2><p>All 368 decals: icon, effect, rarity, where each comes from, normal and premium.</p>
       <div class="strip">{''.join('<div><img alt="" loading="lazy" src="img/decals/%s.webp"></div>' % i for i in ('SKL_DEATH_PROOF', 'SKL_ATK_CHARGED', 'SKL_MONEYUP_01', 'SKL_SHOVEL_ABILITY_UP'))}</div></a>
     <a class="section" href="gear.html"><h2>Gear</h2><p>{len(gear['gear']):,} weapons and armour pieces: stats at every upgrade level, upgrade lines and crafting costs.</p>
@@ -534,6 +534,7 @@ if (/^#BODY_/.test(location.hash)) location.replace('models.html' + location.has
 <script src="data/gasmasks.js"></script>
 <script src="data/jackals.js"></script>
 <script src="data/bosses.js"></script>
+<script src="data/forcemen.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({{ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }}[c]));
@@ -544,6 +545,7 @@ const INDEX = [].concat(
   JACKALS.families.flatMap(f => f.tiers.map(t => ['Jackals', f.name + ' (' + t.tier + ')', t.type, 'jackals.html#' + t.type, `img/${{t.look}}_face.webp`, [t.weapon.name, f.voice.en, f.voice.jp].join(' ')])),
   BOSSES.dons.map(d => ['Bosses', d.name, d.id, 'bosses.html#' + d.id, `img/${{d.id}}_front.webp`, ['Don', d.area, d.rideName, d.voice.en, d.voice.jp].join(' ')]),
   BOSSES.minis.flatMap(m => [['Bosses', m.name, m.id, 'bosses.html#' + m.id, `img/${{m.id}}_front.webp`, ['mini boss', m.voice.en, m.voice.jp].join(' ')], ['Bosses', m.name + ' Mk-2', m.mk2, 'bosses.html#' + m.mk2, `img/${{m.mk2}}_front.webp`, 'mini boss Mk-2']]),
+  FORCEMEN.forcemen.map(f => ['Bosses', f.name, f.type, 'bosses.html#' + f.id, `img/${{f.id}}_front.webp`, ['4 FORCEMEN', f.area, f.gear.weapons.map(w => w.name).join(' ')].join(' ')]),
   GASMASKS.map(m => ['Gas masks', m.name, 'Gas mask ' + m.no, 'models.html#masks', m.icon ? `img/items/${{m.icon}}.webp` : '', m.female + ' ' + m.male]),
   DECALS.map(d => ['Skill decals', d.name + (d.premium ? ' (Premium)' : ''), d.id, 'decals.html#' + d.id, `img/decals/${{d.icon}}.webp`, d.desc]),
   GEAR.gear.map(g => ['Gear', g.name, g.id, 'gear.html#' + g.id, g.icon ? `img/items/${{g.icon}}.webp` : '', [g.type, g.weapon, g.category].join(' ')]),
