@@ -449,7 +449,7 @@ bindSeg('view', 'view');
 bindSeg('d-mode', 'mode');
 bindSeg('d-lang', 'lang');
 $('d-look').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) openEntry(state.open, +b.dataset.m); });
-for (const g of ['dons', 'minis']) $(g).addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openEntry(+c.dataset.i, 0); });
+for (const g of ['dons', 'minis', 'ffm']) $(g).addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openEntry(+c.dataset.i, 0); });
 $('d-voice').addEventListener('click', e => { const b = e.target.closest('[data-clip]'); if (b) playClip(b); });
 $('d-preset').addEventListener('click', e => { const b = e.target.closest('button'); if (b) v3Preset(b.dataset.v); });
 const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
