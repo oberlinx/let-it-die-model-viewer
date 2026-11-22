@@ -55,6 +55,14 @@ css += """  .card .shot.tall { aspect-ratio: 108 / 132; padding: 6px; }
   .upg td:not(:last-child), .upg th { white-space: nowrap; }
   .upg tr:last-child td { border-top: 1px solid var(--panel-border); }
   .upg a { color: var(--text); }
+  table.src { border-collapse: collapse; font-size: 12.5px; width: 100%; margin-bottom: 6px; }
+  table.src th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 0 10px 3px 0; }
+  table.src td { padding: 3px 10px 3px 0; border-top: 1px solid var(--panel-border); vertical-align: top; }
+  table.src td:last-child { white-space: nowrap; }
+  .srcOther { font-size: 12.5px; color: var(--text-dim); margin: 4px 0 8px; }
+  .srcFloor { font-size: 12.5px; margin-top: 6px; }
+  .srcFloor input { width: 70px; background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 3px 6px; margin-left: 6px; }
+  #d-floor-out { margin-top: 4px; color: var(--text); }
 """
 
 HEAD = """<!doctype html>
@@ -340,7 +348,7 @@ page('materials.html', 'Materials',
     <label class="seg"><span class="lbl">Rarity</span><select id="rarity"><option value="">Any</option></select></label>
     <label class="seg"><span class="lbl">Found on floor</span><input type="number" id="floor" min="1" max="451" placeholder="any" style="width:70px;background:var(--bg-raised);color:var(--text);border:1px solid var(--panel-border);font:inherit;font-size:12px;padding:6px 8px;"></label>
     <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="used">Most used</option><option value="first">First floor</option></select></label>""",
-     "Data comes from the game's <code>master_item</code> table, and the uses from <code>master_part_research</code>: a piece is listed under a material if developing it or any of its upgrade levels needs that material. Where to find: an item with a loot group can come out of the treasure boxes, Treasure Tubers, Haters and mini bosses that <code>master_floor_drop_gen</code> gives that group on a floor; the percentage is the chance that one box or enemy of that kind gives this item there (the group's weight over the total, split evenly when a group holds several items), shown as a range where floors or areas differ. Pickups are the items lying around a floor (<code>master_floor.itemgenid</code> and <code>master_item_gen</code>); their percentage is the item's share of that floor's pickup list. First floor is the lowest floor any of these reach. Tengoku's loot tables are set on its boss floors (multiples of 5) and some others, as the data defines them. Shops, the Hernia Vending Machine, quests, reward boxes, Lost Bags and Jackals are listed as well. Skillshrooms are also crafting materials; they are on the Mushrooms page.",
+     "Data comes from the game's <code>master_item</code> table, and the uses from <code>master_part_research</code>: a piece is listed under a material if developing it or any of its upgrade levels needs that material. Where to find: an item with a loot group can come out of the treasure boxes, Treasure Tubers, Haters and mini bosses that <code>master_floor_drop_gen</code> gives that group on a floor; the percentage is the chance that one box or enemy of that kind gives this item there (the group's weight over the total, split evenly when a group holds several items), shown as a range where floors or areas differ. Pickups are the items lying around a floor (<code>master_floor.itemgenid</code> and <code>master_item_gen</code>); their percentage is the item's share of that floor's pickup list. First floor is the lowest floor any of these reach. In Tengoku, large and special treasure boxes, Treasure Tubers and mini bosses only appear on the boss floors (every fifth floor), while Haters and medium boxes appear on every floor. Each Tengoku floor also has alternative layouts with their own loot tables, which is why some chances are ranges. Check a floor in an item's details gives the exact chances on one floor. Shops, the Hernia Vending Machine, quests, reward boxes, Lost Bags and Jackals are listed as well. Skillshrooms are also crafting materials; they are on the Mushrooms page.",
      DIALOG % '', 'gear.js', r"""const ALL = GEAR.materials.map((m, i) => Object.assign({ order: i }, m));
 const BY_ID = Object.fromEntries(ALL.map(d => [d.id, d]));
 const PIECE = Object.fromEntries(GEAR.gear.map(g => [g.id, g]));
@@ -350,32 +358,65 @@ for (const p of GEAR.gear) for (const how of ['craft', 'upgrade']) for (const [m
   const u = USED[mid] = USED[mid] || new Map(); u.set(p.id, u.has(p.id) ? 'both' : how);
 }
 const uses = d => USED[d.id] ? USED[d.id].size : 0;
-// Where to find: loot entries are [type, floors, chance in the tower, chance in Tengoku], chances as [low %, high %]
+// Where to find. Each source is a list of runs [first floor, last floor, step, low %, high %]: floors spaced by
+// <step> (1 = every floor, 5 = Tengoku's boss floors) with the same odds. A range of odds means the floor's areas or
+// its alternative layouts differ.
 const TOWER = 50;
 const SRC_TYPE = { TRBOX_S: ['Small treasure box', 'box'], TRBOX_M: ['Medium treasure box', 'box'], TRBOX_L: ['Large treasure box', 'box'],
   SPM: ['Special treasure box (medium)', 'box'], SPL: ['Special treasure box (large)', 'box'], SPXL: ['Special treasure box (extra large)', 'box'],
-  TRBOX_SPXL_RARE: ['Rare special treasure box', 'box'], TRZAKO: ['Treasure Tuber', 'Tuber'], HATER_L: ['Hater, large drop', 'Hater'], HATER_M: ['Hater, medium drop', 'Hater'],
+  TRBOX_SPXL_RARE: ['Rare special treasure box', 'box'], TRZAKO: ['Treasure Tuber', 'Tuber'], HATER_L: ['Hater (large drop)', 'Hater'], HATER_M: ['Hater (medium drop)', 'Hater'],
   MBOSS1: ['COEN', 'kill'], MBOSS2: ['JIN-DIE', 'kill'], MBOSS3: ['GOTO-9', 'kill'], MBOSS4: ['U-10', 'kill'] };
-const odds = (o, unit) => o ? `, ${o[0] === o[1] ? o[0] : o[0] + '–' + o[1]}% per ${unit}` : '';
-function floorsText(rs, low, high, unit) {
-  const parts = [], tower = rs.filter(([a]) => a <= TOWER).map(([a, b]) => a === Math.min(b, TOWER) ? String(a) : `${a}–${Math.min(b, TOWER)}`);
-  if (tower.length) parts.push((tower.length === 1 && !tower[0].includes('–') ? 'floor ' : 'floors ') + tower.join(', ') + odds(low, unit));
-  const up = [];
-  for (const [a, b] of rs) for (let n = Math.max(a, TOWER + 1); n <= b; n++) up.push(n);
-  if (up.length) parts.push((up.length === 401 ? 'all of Tengoku' : `Tengoku from floor ${up[0]}, ${up.length} of its 401 floors` + (up.every(n => n % 5 === 0) ? ' (multiples of 5)' : '')) + odds(high, unit));
-  return parts.join('; ');
+const pctText = (lo, hi) => { const f = x => x >= 10 ? Math.round(x) : x >= 1 ? Math.round(x * 10) / 10 : x; return lo === hi ? `${f(lo)}%` : `${f(lo)}–${f(hi)}%`; };
+// "Tengoku boss floors 55–450" / "Tengoku 52–451" / "Floors 4–7, 9": where a run list reaches, in words (odds ignored)
+function floorWords(rs, tengoku) {
+  const fl = [];
+  for (const [a, b, st] of rs) for (let n = a; n <= b; n += st) fl.push(n);
+  fl.sort((x, y) => x - y);
+  const spans = [];      // runs of consecutive floors, or of floors 5 apart
+  for (const n of fl) {
+    const last = spans[spans.length - 1];
+    if (last && (n - last.b === (last.st || n - last.b)) && (n - last.b === 1 || n - last.b === 5)) { last.st = n - last.b; last.b = n; }
+    else spans.push({ a: n, b: n, st: 0 });
+  }
+  const part = ({ a, b }) => a === b ? String(a) : `${a}–${b}`;
+  if (tengoku && fl.every(n => n % 5 === 0)) return `Tengoku boss floors ${spans.map(part).join(', ')} <span class="sub">(every 5th floor)</span>`;
+  return (tengoku ? 'Tengoku ' : fl.length === 1 ? 'Floor ' : 'Floors ') + spans.map(x => part(x) + (x.st === 5 ? ' (every 5th floor)' : '')).join(', ');
+}
+// The sources of an item as rows {label, unit, runs}; the four mini bosses become one row when they match.
+function srcRows(d) {
+  const s = d.src || {}, out = [];
+  if (s.pickup) out.push({ label: 'Lying around on the floor', unit: 'pickup', runs: s.pickup });
+  const minis = (s.loot || []).filter(([t]) => /^MBOSS/.test(t));
+  const same = minis.length > 1 && minis.every(([, r]) => JSON.stringify(r) === JSON.stringify(minis[0][1]));
+  for (const [t, runs] of s.loot || []) {
+    if (/^MBOSS/.test(t) && same) { if (t === minis[0][0]) out.push({ label: 'Mini bosses: ' + minis.map(([x]) => SRC_TYPE[x][0]).join(', '), unit: 'kill', runs }); continue; }
+    const [label, unit] = SRC_TYPE[t] || [t, 'drop'];
+    out.push({ label: /^MBOSS/.test(t) ? label + ' (mini boss)' : label, unit, runs });
+  }
+  return out;
+}
+function rowCells(r) {
+  const cells = [];
+  for (const tengoku of [false, true]) {
+    const rs = r.runs.filter(([a]) => tengoku ? a > TOWER : a <= TOWER);
+    if (!rs.length) continue;
+    cells.push(`<tr><td>${esc(r.label)}</td><td>${floorWords(rs, tengoku)}</td><td>${pctText(Math.min(...rs.map(x => x[3])), Math.max(...rs.map(x => x[4])))} per ${r.unit}</td></tr>`);
+  }
+  return cells.join('');
 }
 function srcHtml(d) {
-  const s = d.src || {}, lines = [];
-  if (s.pickup) lines.push('Lying around: ' + floorsText(s.pickup[0], s.pickup[1], s.pickup[2], 'pickup'));
-  for (const [type, rs, low, high] of s.loot || []) {
-    const [label, unit] = SRC_TYPE[type] || [type, 'drop'];
-    lines.push(`${label}${unit === 'kill' ? ' (mini boss)' : ''}: ` + floorsText(rs, low, high, unit === 'kill' ? 'kill' : unit));
-  }
-  for (const o of s.other || []) lines.push(esc(o));
-  return lines.length ? lines.join('<br>') : 'None in the game data';
+  const rows = srcRows(d), other = (d.src && d.src.other) || [];
+  if (!rows.length && !other.length) return 'None in the game data';
+  return (rows.length ? `<table class="src"><tr><th>From</th><th>Where</th><th>Chance</th></tr>${rows.map(rowCells).join('')}</table>` : '') +
+    (other.length ? `<div class="srcOther">${other.map(esc).join('<br>')}</div>` : '') +
+    (rows.length ? `<div class="srcFloor"><label>Check a floor <input type="number" id="d-floor" min="1" max="451" placeholder="floor"></label><div id="d-floor-out"></div></div>` : '');
 }
-const onFloor = (d, n) => !!(d.src) && [...(d.src.loot || []).map(l => l[1]), d.src.pickup ? d.src.pickup[0] : []].some(rs => rs.some(([a, b]) => a <= n && n <= b));
+// exact sources and odds on one floor
+function onFloorHtml(d, n) {
+  const hits = srcRows(d).map(r => [r, r.runs.find(([a, b, st]) => a <= n && n <= b && (n - a) % st === 0)]).filter(([, x]) => x);
+  return hits.length ? hits.map(([r, x]) => `${esc(r.label)}: ${pctText(x[3], x[4])} per ${r.unit}`).join('<br>') : `Not found on floor ${n}.`;
+}
+const onFloor = (d, n) => srcRows(d).some(r => r.runs.some(([a, b, st]) => a <= n && n <= b && (n - a) % st === 0));
 const state = { q: '', rarity: '', floor: '', sort: 'game', open: null };
 let list = [];
 function renderGrid() {
@@ -409,6 +450,8 @@ function openItem(id) {
   const used = USED[id];
   if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="gear.html#${pid}">${esc(PIECE[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
   $('d-info').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const fb = $('d-floor');
+  if (fb) { const show = () => { $('d-floor-out').innerHTML = fb.value ? onFloorHtml(d, +fb.value) : ''; }; fb.addEventListener('input', show); fb.value = state.floor; show(); }
   if (!$('dlg').open) $('dlg').showModal();
   history.replaceState(null, '', '#' + d.id);
 }

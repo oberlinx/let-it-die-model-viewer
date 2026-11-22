@@ -288,24 +288,34 @@ for r in rows('select rwdid from master_stamp_bonus'):
 for r in rows('select type, drop_item_id_1, drop_item_1_rate, drop_item_id_2, drop_item_2_rate from master_jackal'):
     for k in ('1', '2'):
         if r['drop_item_id_' + k] and r['drop_item_%s_rate' % k]:
-            _msrc(r['drop_item_id_' + k], 'Dropped by %s: %g%%' % (r['type'], r['drop_item_%s_rate' % k] / 10))
+            _msrc(r['drop_item_id_' + k], 'Dropped by Jackal %s (tier %s): %g%% per Jackal' % (r['type'][7], r['type'][7:], r['drop_item_%s_rate' % k] / 10))
 _uncap = {r['i'] for r in rows('select item1id as i from master_bodylvl_limit_break_item union select item2id from master_bodylvl_limit_break_item '
                                'union select item3id from master_bodylvl_limit_break_item union select item4id from master_bodylvl_limit_break_item')}
 
+def runs(per):
+    """Floor -> (low %, high %) as runs [first, last, step, low %, high %]: floors spaced by the same step (1 for every
+    floor, 5 for Tengoku's boss floors) whose odds are the same, rounded as shown. The Tower (1-50) and Tengoku never share a run."""
+    out = []
+    for no in sorted(per):
+        lo, hi = _pct(per[no][0]), _pct(per[no][1])
+        if out:
+            a, b, st, l, h = out[-1]
+            same_side = (b <= 50) == (no <= 50)
+            if same_side and (l, h) == (lo, hi) and (no - b == st or (a == b and no - b in (1, 5))):
+                out[-1] = [a, no, no - b if a == b else st, l, h]; continue
+        out.append([no, no, 1, lo, hi])
+    return out
+
 def mat_sources(item, grp):
-    """{'loot': [[type, floors, tower %, Tengoku %], ...], 'pickup': [floors, tower %, Tengoku %], 'first': floor, 'other': [...], 'uncap': True}"""
+    """{'loot': [[type, runs], ...], 'pickup': runs, 'first': floor, 'other': [...], 'uncap': True}; runs as in runs()."""
     out = {}
-    def span(per, keep):
-        v = [x for no, x in per.items() if keep(no)]
-        return [_pct(min(x[0] for x in v)), _pct(max(x[1] for x in v))] if v else None
     order = list(BP_KIND); floors = set()
     if grp and grp in _grp_odds:
-        out['loot'] = [[typ[8:], ranges(sorted(per)), span(per, lambda n: n <= 50), span(per, lambda n: n > 50)]
-                       for typ, per in sorted(_grp_odds[grp].items(), key=lambda kv: order.index(kv[0]))]
+        out['loot'] = [[typ[8:], runs(per)] for typ, per in sorted(_grp_odds[grp].items(), key=lambda kv: order.index(kv[0]))]
         for per in _grp_odds[grp].values(): floors.update(per)
     if item in _pick:
         per = _pick[item]; floors.update(per)
-        out['pickup'] = [ranges(sorted(per)), span(per, lambda n: n <= 50), span(per, lambda n: n > 50)]
+        out['pickup'] = runs(per)
     if floors: out['first'] = min(floors)
     if item in _mat_other: out['other'] = _mat_other[item]
     if item in _uncap: out['uncap'] = True
