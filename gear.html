@@ -221,12 +221,13 @@ function floorWords(rs) {
   const spans = [];
   for (const n of fl) {
     const last = spans[spans.length - 1];
-    if (last && (n - last.b === (last.st || n - last.b)) && (n - last.b === 1 || n - last.b === 5)) { last.st = n - last.b; last.b = n; }
+    if (last && (n - last.b === (last.st || n - last.b)) && [1, 5, 10].includes(n - last.b)) { last.st = n - last.b; last.b = n; }
     else spans.push({ a: n, b: n, st: 0 });
   }
   const part = ({ a, b }) => a === b ? String(a) : `${a}–${b}`;
-  if (fl[0] > TOWER && fl.every(n => n % 5 === 0)) return `boss floors ${spans.map(part).join(', ')} <span class="sub">(every 5th floor)</span>`;
-  return spans.map(x => part(x) + (x.st === 5 ? ' (every 5th floor)' : '')).join(', ');
+  const every = x => x.st > 1 ? ` <span class="sub">(every ${x.st}th floor)</span>` : '';
+  if (fl[0] > TOWER && fl.every(n => n % 5 === 0)) return 'boss floors ' + spans.map(x => part(x) + every(x)).join(', ');
+  return spans.map(x => part(x) + every(x)).join(', ');
 }
 // The sources of an item as table rows {label, unit, where, runs, area}: one row per source and place (the Tower,
 // regular TENGOKU, the NEO routes). Rows that match (same place, floors and chances) are merged: the NEO routes
@@ -238,6 +239,7 @@ function srcRows(d) {
     const tower = main.filter(r => r[0] <= TOWER), teng = main.filter(r => r[0] > TOWER);
     if (tower.length) rows.push({ key, label, unit, place: 'tower', routes: ['main'], runs: tower, areas: (areas || {}).main });
     if (teng.length) rows.push({ key, label, unit, place: 'tengoku', routes: ['main'], runs: teng });
+    if (routes.ARENA) rows.push({ key, label, unit, place: 'arena', routes: ['ARENA'], runs: routes.ARENA });
     for (const r of Object.keys(ROUTE)) if (routes[r]) rows.push({ key, label, unit, place: 'neo', routes: [r], runs: routes[r] });
   };
   if (s.pickup) add('pickup', 'Lying around on the floor', 'pickup', s.pickup[0], s.pickup[1]);
@@ -257,15 +259,22 @@ function srcRows(d) {
     else out.push(Object.assign({}, r, boss ? { bosses: [[SRC_TYPE[r.key][0], r.routes]] } : {}));
   }
   for (const r of out) {
+    if (r.place === 'arena') r.label = `Arena reward (${r.label.toLowerCase()})`;
     if (r.bosses) r.label = r.bosses.length === 1 ? r.bosses[0][0] + ' (mini boss)'
       : r.place === 'neo' ? 'Each route\'s mini boss: ' + r.bosses.map(([n, rt]) => `${n} (${rt.map(x => ROUTE[x]).join(', ')})`).join(', ')
       : 'Mini bosses: ' + r.bosses.map(([n]) => n).join(', ');
-    r.where = r.place === 'tower' ? (r.runs.length === 1 && r.runs[0][0] === r.runs[0][1] ? 'Tower floor ' : 'Tower floors ') + floorWords(r.runs)
+    r.where = r.place === 'arena' ? arenaWords(r.runs) : r.place === 'tower' ? (r.runs.length === 1 && r.runs[0][0] === r.runs[0][1] ? 'Tower floor ' : 'Tower floors ') + floorWords(r.runs)
       : r.place === 'tengoku' ? 'TENGOKU ' + floorWords(r.runs)
       : `NEO ${[...new Set(r.routes)].map(x => ROUTE[x]).join(', ')} route${new Set(r.routes).size > 1 ? 's' : ''}: ` + floorWords(r.runs);
   }
-  const order = { tower: 0, tengoku: 1, neo: 2 };
+  const order = { arena: 0, tower: 1, tengoku: 2, neo: 3 };
   return out.sort((x, y) => order[x.place] - order[y.place]);
+}
+// "White Steel's arena: Hard (5F), Nightmare (8F)" from the floors of arena loot (GEAR.arenas: floor -> [Forceman, difficulty])
+function arenaWords(rs) {
+  const by = {};
+  for (const [a, b, st] of rs) for (let n = a; n <= b; n += st) { const [who, mode] = GEAR.arenas[n] || ['?', '?']; (by[who] = by[who] || []).push(`${mode} (${n}F)`); }
+  return Object.entries(by).map(([who, m]) => `${esc(who)}'s arena (4 FORCEMEN): ${m.join(', ')}`).join('; ');
 }
 function srcHtml(d) {
   const rows = srcRows(d), other = (d.src && d.src.other) || [];
@@ -273,7 +282,7 @@ function srcHtml(d) {
   const cell = r => pctText(Math.min(...r.runs.map(x => x[3])), Math.max(...r.runs.map(x => x[4]))) + ` per ${r.unit}`;
   return (rows.length ? `<table class="src"><tr><th>From</th><th>Where</th><th>Chance</th></tr>${rows.map(r => `<tr><td>${esc(r.label)}</td><td>${r.where}</td><td>${cell(r)}</td></tr>`).join('')}</table><div class="sub">A range is the lowest and highest chance over those floors; Check a floor gives the exact chance on one floor.</div>` : '') +
     (other.length ? `<div class="srcOther">${other.map(esc).join('<br>')}</div>` : '') +
-    (rows.length ? `<div class="srcFloor"><label>Check a floor <input type="number" id="d-floor" min="1" max="451" placeholder="floor"></label><div id="d-floor-out"></div></div>` : '');
+    (rows.some(r => r.place !== 'arena') ? `<div class="srcFloor"><label>Check a floor <input type="number" id="d-floor" min="1" max="451" placeholder="floor"></label><div id="d-floor-out"></div></div>` : '');
 }
 // exact sources and chances on one floor, per place; a Tower floor whose areas differ lists them by name
 function onFloorHtml(d, n) {

@@ -194,15 +194,27 @@ _tot2 = {}
 for r in _drop_rows2: _tot2[(r['flrid'], r['areaid'], r['refareaid'], r['type'])] = _tot2.get((r['flrid'], r['areaid'], r['refareaid'], r['type']), 0) + r['freq']
 _rooms = {}     # (flrid, areaid, type) -> {refareaid: weight}
 for (f, a, ra, t) in _tot2: _rooms.setdefault((f, a, t), {})[ra] = _room_w.get((a, ra), 100) if ra != '-' else 100
+# The 4 FORCEMEN arenas are areas of their own on three Tower floors per stage (master_area_setting_unit, unit
+# *_SMALLBOSS; the HARD and EXPART arena scripts are Hard and Nightmare). Loot there is the arena fight's reward,
+# so it is kept apart as the route 'ARENA', and ARENAS (floor -> [Forceman, difficulty]) goes to the page.
+_FFM = {'S_MET': 'White Steel', 'S_ARC': 'Red Napalm', 'S_AMS': 'Black Thunder', 'S_RFT': 'Pale Wind'}
+_arena = {}
+for r in rows("select stgid, areaid, kis from master_area_setting_unit where unit like '%\\_SMALLBOSS' escape '\\' and areaid not like '%HVN%'"):
+    kis = r['kis'] or ''        # ..._KIS_HARD / _KIS_H for Hard, _KIS_EXPART / _EXPT / _E for Nightmare, none for Normal
+    mode = 'Nightmare' if re.search(r'_(EXP\w*|E)$', kis) else 'Hard' if re.search(r'_H(ARD)?$', kis) else 'Normal'
+    _arena[r['areaid']] = [_FFM.get(r['stgid'], r['stgid']), mode]
+ARENAS = {}
+for r in rows('select distinct no, areaid from master_floor where no > 0'):
+    if r['areaid'] in _arena: ARENAS[r['no']] = _arena[r['areaid']]
 _area_pct = {}  # grp -> type -> (route, floor) -> {area name: %}
 for r in _drop_rows2:
     if r['grp'] < 50 or r['type'] not in BP_KIND or r['flrid'] not in _flr_no: continue
     rooms = _rooms[(r['flrid'], r['areaid'], r['type'])]; wsum = sum(rooms.values())
     pct = 100.0 * r['freq'] / _tot2[(r['flrid'], r['areaid'], r['refareaid'], r['type'])] / _grp_size.get(r['grp'], 1) * rooms[r['refareaid']] / wsum
-    key = (ROUTE_OF(r['flrid']), _flr_no[r['flrid']]); name = _flr_area_name.get((r['flrid'], r['areaid']), '') or r['areaid']
+    key = ('ARENA' if r['areaid'] in _arena else ROUTE_OF(r['flrid']), _flr_no[r['flrid']]); name = _flr_area_name.get((r['flrid'], r['areaid']), '') or r['areaid']
     d = _area_pct.setdefault(r['grp'], {}).setdefault(r['type'], {}).setdefault(key, {})
     d[name] = d.get(name, 0) + pct
-ROUTES = ['main', 'R00', 'R01', 'R02', 'R03']
+ROUTES = ['main', 'ARENA', 'R00', 'R01', 'R02', 'R03']
 
 def route_runs(per):
     """(route, floor) -> {area: %} as {route: runs}, runs as in runs() (low and high over the floor's areas), plus the
@@ -382,7 +394,7 @@ for it in rows("select * from master_item where itemtype != 'ITTP_RMAP' order by
     src = mat_sources(it['itemid'], it['grp'])
     if src: m['src'] = src
     materials.append(m)
-json.dump(dict(gear=gear, materials=materials), open(os.path.join(OUT, 'gear.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+json.dump(dict(gear=gear, materials=materials, arenas=ARENAS), open(os.path.join(OUT, 'gear.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(len(gear), 'gear,', sum(1 for g in gear if not g['icon']), 'without icon;', len(materials), 'materials,', sum(1 for m in materials if not m['icon']), 'without icon')
 
 # ---------------- mushrooms and beasts ----------------
