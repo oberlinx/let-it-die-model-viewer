@@ -241,7 +241,7 @@ function srcRows(d) {
     if (r.bosses) r.label = r.bosses.length === 1 ? r.bosses[0][0] + ' (mini boss)'
       : r.place === 'neo' ? 'Each route\'s mini boss: ' + r.bosses.map(([n, rt]) => `${n} (${rt.map(x => ROUTE[x]).join(', ')})`).join(', ')
       : 'Mini bosses: ' + r.bosses.map(([n]) => n).join(', ');
-    r.where = r.place === 'tower' ? 'Tower floors ' + floorWords(r.runs)
+    r.where = r.place === 'tower' ? (r.runs.length === 1 && r.runs[0][0] === r.runs[0][1] ? 'Tower floor ' : 'Tower floors ') + floorWords(r.runs)
       : r.place === 'tengoku' ? 'TENGOKU ' + floorWords(r.runs)
       : `NEO ${[...new Set(r.routes)].map(x => ROUTE[x]).join(', ')} route${new Set(r.routes).size > 1 ? 's' : ''}: ` + floorWords(r.runs);
   }
