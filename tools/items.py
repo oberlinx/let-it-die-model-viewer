@@ -258,6 +258,59 @@ for g in gear:
         g['levels'] = p['reflvllmt']
         if p['is_limitbreak']: g['uncap'] = True
 
+# ---- where materials and consumables come from ----
+# Loot: like blueprints, an item with a group number (master_item.grp) can come out of the containers and enemies that
+# master_floor_drop_gen gives that group on a floor (_grp_odds above). Pickups: each floor area names an item list
+# (master_floor.itemgenid -> master_item_gen) for the items lying around; the chance is the item's weight over the list's.
+_gen = {}
+for r in rows('select id, itemid, freq from master_item_gen where freq > 0'): _gen.setdefault(r['id'], []).append((r['itemid'], r['freq']))
+_pick = {}     # item -> floor -> [low %, high %] over the floor's areas
+for r in rows("select distinct no, areaid, itemgenid from master_floor where no > 0 and itemgenid != ''"):
+    lst = _gen.get(r['itemgenid'], []); tot = sum(w for _, w in lst)
+    for it, w in lst:
+        d = _pick.setdefault(it, {}); pct = 100.0 * w / tot; lo, hi = d.get(r['no'], (pct, pct)); d[r['no']] = (min(lo, pct), max(hi, pct))
+_mat_other = {}
+def _msrc(item, text):
+    if text not in _mat_other.setdefault(item, []): _mat_other[item].append(text)
+for r in rows("select distinct itemid from master_shop_product_item where itemid like 'ITM%'"): _msrc(r['itemid'], 'Sold in shops')
+for r in rows("select distinct lineup_id, type_id from master_automaticshop_lineup where type_id like 'ITM%'"):
+    _msrc(r['type_id'], 'Hernia Vending Machine' + {'COMMON': '', 'RE': ', for Recycle Points'}.get(r['lineup_id'], ', daily lineup'))
+_rwd_item = {r['rwdid']: r['val0'] for r in rows("select rwdid, val0 from master_reward where type = 'ITEM' and val0 like 'ITM%'")}
+for r in rows('select qid, name, first_rwd, rwd from master_quest'):
+    for k in ('first_rwd', 'rwd'):
+        if r[k] in _rwd_item: _msrc(_rwd_item[r[k]], 'Quest reward: ' + clean(re.sub(r'#\d', '', tx(r['name']) or r['qid'])))
+for r in rows('select distinct rarity, rwdid from master_deathbox_content_gen where freq > 0'):
+    if r['rwdid'] in _rwd_item: _msrc(_rwd_item[r['rwdid']], 'Reward box (%s)' % r['rarity'].replace('_', ' ').lower())
+for r in rows("select distinct rarity, rwdid from master_mysterybag_content_gen_odds where odds_id = 'offline' and freq > 0"):
+    if r['rwdid'] in _rwd_item: _msrc(_rwd_item[r['rwdid']], 'Lost Bag (%s)' % r['rarity'].lower())
+for r in rows('select rwdid from master_stamp_bonus'):
+    if r['rwdid'] in _rwd_item: _msrc(_rwd_item[r['rwdid']], 'Floor stamp completion bonus')
+for r in rows('select type, drop_item_id_1, drop_item_1_rate, drop_item_id_2, drop_item_2_rate from master_jackal'):
+    for k in ('1', '2'):
+        if r['drop_item_id_' + k] and r['drop_item_%s_rate' % k]:
+            _msrc(r['drop_item_id_' + k], 'Dropped by %s: %g%%' % (r['type'], r['drop_item_%s_rate' % k] / 10))
+_uncap = {r['i'] for r in rows('select item1id as i from master_bodylvl_limit_break_item union select item2id from master_bodylvl_limit_break_item '
+                               'union select item3id from master_bodylvl_limit_break_item union select item4id from master_bodylvl_limit_break_item')}
+
+def mat_sources(item, grp):
+    """{'loot': [[type, floors, tower %, Tengoku %], ...], 'pickup': [floors, tower %, Tengoku %], 'first': floor, 'other': [...], 'uncap': True}"""
+    out = {}
+    def span(per, keep):
+        v = [x for no, x in per.items() if keep(no)]
+        return [_pct(min(x[0] for x in v)), _pct(max(x[1] for x in v))] if v else None
+    order = list(BP_KIND); floors = set()
+    if grp and grp in _grp_odds:
+        out['loot'] = [[typ[8:], ranges(sorted(per)), span(per, lambda n: n <= 50), span(per, lambda n: n > 50)]
+                       for typ, per in sorted(_grp_odds[grp].items(), key=lambda kv: order.index(kv[0]))]
+        for per in _grp_odds[grp].values(): floors.update(per)
+    if item in _pick:
+        per = _pick[item]; floors.update(per)
+        out['pickup'] = [ranges(sorted(per)), span(per, lambda n: n <= 50), span(per, lambda n: n > 50)]
+    if floors: out['first'] = min(floors)
+    if item in _mat_other: out['other'] = _mat_other[item]
+    if item in _uncap: out['uncap'] = True
+    return out
+
 MAT = {'ITTP_MATERIAL': 'Material', 'ITTP_HEAL': 'Consumable', 'ITTP_BACK': 'Consumable', 'ITTP_BIV': 'Consumable', 'ITTP_WOOD': 'Material'}
 materials = []
 for it in rows("select * from master_item where itemtype != 'ITTP_RMAP' order by sort_no, itemid"):
@@ -267,6 +320,8 @@ for it in rows("select * from master_item where itemtype != 'ITTP_RMAP' order by
              desc=clean(tx(it['desc'])), sell=it['sell_money'])
     if it['buy_money']: m['buy'] = it['buy_money']
     if it['platform']: m['psOnly'] = True
+    src = mat_sources(it['itemid'], it['grp'])
+    if src: m['src'] = src
     materials.append(m)
 json.dump(dict(gear=gear, materials=materials), open(os.path.join(OUT, 'gear.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(len(gear), 'gear,', sum(1 for g in gear if not g['icon']), 'without icon;', len(materials), 'materials,', sum(1 for m in materials if not m['icon']), 'without icon')

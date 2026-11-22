@@ -198,7 +198,8 @@ const bpOn = (d, n) => !!(d.bp && d.bp.floors) && Object.values(d.bp.floors).som
 // One line per container or enemy type: [type, floors, chance in the tower, chance in Tengoku], chances as [low %, high %].
 const BP_TYPE = { TRBOX_S: ['Small treasure box', 'box'], TRBOX_M: ['Medium treasure box', 'box'], TRBOX_L: ['Large treasure box', 'box'],
   SPM: ['Special treasure box (medium)', 'box'], SPL: ['Special treasure box (large)', 'box'], SPXL: ['Special treasure box (extra large)', 'box'],
-  TRBOX_SPXL_RARE: ['Rare special treasure box', 'box'], TRZAKO: ['Treasure Tuber', 'Tuber'], HATER_L: ['Hater, large drop', 'Hater'], HATER_M: ['Hater, medium drop', 'Hater'] };
+  TRBOX_SPXL_RARE: ['Rare special treasure box', 'box'], TRZAKO: ['Treasure Tuber', 'Tuber'], HATER_L: ['Hater, large drop', 'Hater'], HATER_M: ['Hater, medium drop', 'Hater'],
+  MBOSS1: ['COEN (mini boss)', 'kill'], MBOSS2: ['JIN-DIE (mini boss)', 'kill'], MBOSS3: ['GOTO-9 (mini boss)', 'kill'], MBOSS4: ['U-10 (mini boss)', 'kill'] };
 const odds = (o, unit) => o ? `, ${o[0] === o[1] ? o[0] : o[0] + '–' + o[1]}% per ${unit}` : '';
 function bpLoot([type, rs, low, high]) {
   const [label, unit] = BP_TYPE[type] || [type, 'drop'], parts = [];

@@ -122,14 +122,15 @@
   <div class="bar">
     <input type="search" id="q" placeholder="Search name or id" aria-label="Search materials">
     <label class="seg"><span class="lbl">Rarity</span><select id="rarity"><option value="">Any</option></select></label>
-    <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="used">Most used</option></select></label>
+    <label class="seg"><span class="lbl">Found on floor</span><input type="number" id="floor" min="1" max="451" placeholder="any" style="width:70px;background:var(--bg-raised);color:var(--text);border:1px solid var(--panel-border);font:inherit;font-size:12px;padding:6px 8px;"></label>
+    <label class="seg"><span class="lbl">Sort</span><select id="sort"><option value="game">Game order</option><option value="name">Name</option><option value="rarity">Rarity</option><option value="used">Most used</option><option value="first">First floor</option></select></label>
   </div>
   <div id="count"></div>
 
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_item</code> table, and the uses from <code>master_part_research</code>: a piece is listed under a material if developing it or any of its upgrade levels needs that material. Skillshrooms are also crafting materials; they are on the Mushrooms page.</p>
+    <p>Data comes from the game's <code>master_item</code> table, and the uses from <code>master_part_research</code>: a piece is listed under a material if developing it or any of its upgrade levels needs that material. Where to find: an item with a loot group can come out of the treasure boxes, Treasure Tubers, Haters and mini bosses that <code>master_floor_drop_gen</code> gives that group on a floor; the percentage is the chance that one box or enemy of that kind gives this item there (the group's weight over the total, split evenly when a group holds several items), shown as a range where floors or areas differ. Pickups are the items lying around a floor (<code>master_floor.itemgenid</code> and <code>master_item_gen</code>); their percentage is the item's share of that floor's pickup list. First floor is the lowest floor any of these reach. Tengoku's loot tables are set on its boss floors (multiples of 5) and some others, as the data defines them. Shops, the Hernia Vending Machine, quests, reward boxes, Lost Bags and Jackals are listed as well. Skillshrooms are also crafting materials; they are on the Mushrooms page.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -172,16 +173,44 @@ for (const p of GEAR.gear) for (const how of ['craft', 'upgrade']) for (const [m
   const u = USED[mid] = USED[mid] || new Map(); u.set(p.id, u.has(p.id) ? 'both' : how);
 }
 const uses = d => USED[d.id] ? USED[d.id].size : 0;
-const state = { q: '', rarity: '', sort: 'game', open: null };
+// Where to find: loot entries are [type, floors, chance in the tower, chance in Tengoku], chances as [low %, high %]
+const TOWER = 50;
+const SRC_TYPE = { TRBOX_S: ['Small treasure box', 'box'], TRBOX_M: ['Medium treasure box', 'box'], TRBOX_L: ['Large treasure box', 'box'],
+  SPM: ['Special treasure box (medium)', 'box'], SPL: ['Special treasure box (large)', 'box'], SPXL: ['Special treasure box (extra large)', 'box'],
+  TRBOX_SPXL_RARE: ['Rare special treasure box', 'box'], TRZAKO: ['Treasure Tuber', 'Tuber'], HATER_L: ['Hater, large drop', 'Hater'], HATER_M: ['Hater, medium drop', 'Hater'],
+  MBOSS1: ['COEN', 'kill'], MBOSS2: ['JIN-DIE', 'kill'], MBOSS3: ['GOTO-9', 'kill'], MBOSS4: ['U-10', 'kill'] };
+const odds = (o, unit) => o ? `, ${o[0] === o[1] ? o[0] : o[0] + '–' + o[1]}% per ${unit}` : '';
+function floorsText(rs, low, high, unit) {
+  const parts = [], tower = rs.filter(([a]) => a <= TOWER).map(([a, b]) => a === Math.min(b, TOWER) ? String(a) : `${a}–${Math.min(b, TOWER)}`);
+  if (tower.length) parts.push((tower.length === 1 && !tower[0].includes('–') ? 'floor ' : 'floors ') + tower.join(', ') + odds(low, unit));
+  const up = [];
+  for (const [a, b] of rs) for (let n = Math.max(a, TOWER + 1); n <= b; n++) up.push(n);
+  if (up.length) parts.push((up.length === 401 ? 'all of Tengoku' : `Tengoku from floor ${up[0]}, ${up.length} of its 401 floors` + (up.every(n => n % 5 === 0) ? ' (multiples of 5)' : '')) + odds(high, unit));
+  return parts.join('; ');
+}
+function srcHtml(d) {
+  const s = d.src || {}, lines = [];
+  if (s.pickup) lines.push('Lying around: ' + floorsText(s.pickup[0], s.pickup[1], s.pickup[2], 'pickup'));
+  for (const [type, rs, low, high] of s.loot || []) {
+    const [label, unit] = SRC_TYPE[type] || [type, 'drop'];
+    lines.push(`${label}${unit === 'kill' ? ' (mini boss)' : ''}: ` + floorsText(rs, low, high, unit === 'kill' ? 'kill' : unit));
+  }
+  for (const o of s.other || []) lines.push(esc(o));
+  return lines.length ? lines.join('<br>') : 'None in the game data';
+}
+const onFloor = (d, n) => !!(d.src) && [...(d.src.loot || []).map(l => l[1]), d.src.pickup ? d.src.pickup[0] : []].some(rs => rs.some(([a, b]) => a <= n && n <= b));
+const state = { q: '', rarity: '', floor: '', sort: 'game', open: null };
 let list = [];
 function renderGrid() {
   const q = state.q.trim().toLowerCase();
-  list = ALL.filter(d => (!state.rarity || d.rarity === +state.rarity) && (!q || (d.name + ' ' + d.id + ' ' + (d.desc || '')).toLowerCase().includes(q)));
-  const by = { game: (a, b) => a.order - b.order, name: (a, b) => a.name.localeCompare(b.name), rarity: (a, b) => b.rarity - a.rarity || a.order - b.order, used: (a, b) => uses(b) - uses(a) || a.order - b.order };
+  list = ALL.filter(d => (!state.rarity || d.rarity === +state.rarity) && (!state.floor || onFloor(d, +state.floor)) && (!q || (d.name + ' ' + d.id + ' ' + (d.desc || '')).toLowerCase().includes(q)));
+  const first = d => d.src && d.src.first || 9999;
+  const by = { game: (a, b) => a.order - b.order, name: (a, b) => a.name.localeCompare(b.name), rarity: (a, b) => b.rarity - a.rarity || a.order - b.order, used: (a, b) => uses(b) - uses(a) || a.order - b.order,
+    first: (a, b) => first(a) - first(b) || a.order - b.order };
   list.sort(by[state.sort]);
   $('count').textContent = `${list.length} of ${ALL.length} materials`;
   $('grid').innerHTML = list.length ? list.map(d => `<button class="card" data-id="${d.id}"><div class="shot tall">${d.icon ? `<img loading="lazy" alt="" src="${pic(d.icon)}">` : ''}</div>
-    <div class="meta"><div class="name">${esc(d.name)}</div><div class="sub">${uses(d) ? `used by ${uses(d)}` : esc(d.type)}</div><div>${stars(d.rarity, 8)}</div></div></button>`).join('')
+    <div class="meta"><div class="name">${esc(d.name)}</div><div class="sub">${d.src && d.src.first ? `from floor ${d.src.first}` : ''}${d.src && d.src.first && uses(d) ? ' · ' : ''}${uses(d) ? `used by ${uses(d)}` : d.src && d.src.first ? '' : esc(d.type)}</div><div>${stars(d.rarity, 8)}</div></div></button>`).join('')
     : '<div class="empty">Nothing matches these filters.</div>';
 }
 function openItem(id) {
@@ -196,6 +225,9 @@ function openItem(id) {
   const rows = [['Id', esc(d.id)], ['Kind', esc(d.type)]];
   if (d.buy) rows.push(['Shop price', num(d.buy) + ' Kill Coins']);
   if (d.sell) rows.push(['Sells for', num(d.sell) + ' Kill Coins']);
+  if (d.src && d.src.first) rows.push(['First found', 'Floor ' + d.src.first]);
+  rows.push(['Where to find', srcHtml(d)]);
+  if (d.src && d.src.uncap) rows.push(['Also used', 'To uncap a Fighter\'s level limit']);
   const used = USED[id];
   if (used) rows.push([`Used by ${used.size}`, `<div class="usedby">${[...used].map(([pid, how]) => `<a href="gear.html#${pid}">${esc(PIECE[pid].name)}</a>${how === 'upgrade' ? ' (upgrades)' : ''}`).join(', ')}</div>`]);
   $('d-info').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -209,6 +241,7 @@ function step(n) {
 for (const r of [...new Set(ALL.map(d => d.rarity).filter(r => r > 0))].sort((a, b) => a - b)) $('rarity').add(new Option(r, r));
 $('q').addEventListener('input', e => { state.q = e.target.value; renderGrid(); });
 $('rarity').addEventListener('change', e => { state.rarity = e.target.value; renderGrid(); });
+$('floor').addEventListener('input', e => { state.floor = e.target.value; renderGrid(); });
 $('sort').addEventListener('change', e => { state.sort = e.target.value; renderGrid(); });
 $('grid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openItem(c.dataset.id); });
 $('d-close').addEventListener('click', closeDlg);
