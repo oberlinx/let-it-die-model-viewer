@@ -225,6 +225,7 @@ function openItem(id) {
   const rows = [['Id', esc(d.id)], ['Kind', esc(d.type)]];
   if (d.buy) rows.push(['Shop price', num(d.buy) + ' Kill Coins']);
   if (d.sell) rows.push(['Sells for', num(d.sell) + ' Kill Coins']);
+  if (d.dismantle) rows.push(['Dismantles for', num(d.dismantle) + ' SPLithium']);
   if (d.src && d.src.first) rows.push(['First found', 'Floor ' + d.src.first]);
   rows.push(['Where to find', srcHtml(d)]);
   if (d.src && d.src.uncap) rows.push(['Also used', 'To uncap a Fighter\'s level limit']);

@@ -20,7 +20,8 @@ Open `index.html`, or serve the folder with GitHub Pages. `index.html`, `gear.ht
 ## Which database the data comes from
 
 `tools/items.py` and `tools/decals.py` read the game's `masters.db`. If that file has been modded, point them at an
-unmodded copy with the `LID_MASTERS` environment variable. The data here was built that way: a modded database can
+unmodded copy with the `LID_MASTERS` environment variable (all the data scripts in `tools/` read it). The data here
+was built that way, from the unmodded database of game version 5.0.6: a modded database can
 contain extra gear and has its PlayStation-only flags cleared, which also shifts the stew odds.
 
 ## How the images were made

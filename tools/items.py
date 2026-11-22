@@ -319,6 +319,7 @@ for it in rows("select * from master_item where itemtype != 'ITTP_RMAP' order by
     m = dict(id=it['itemid'], name=name, type=MAT.get(it['itemtype'], it['itemtype']), rarity=it['rarity'], icon=icon(it['itemid']),
              desc=clean(tx(it['desc'])), sell=it['sell_money'])
     if it['buy_money']: m['buy'] = it['buy_money']
+    if 'sell_spirit' in it.keys() and it['sell_spirit']: m['dismantle'] = it['sell_spirit']    # SPLithium from dismantling (game 5.0.6 on)
     if it['platform']: m['psOnly'] = True
     src = mat_sources(it['itemid'], it['grp'])
     if src: m['src'] = src
