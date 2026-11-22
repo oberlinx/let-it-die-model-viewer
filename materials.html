@@ -117,6 +117,7 @@
   .srcFloor { font-size: 12.5px; margin-top: 6px; }
   .srcFloor input { width: 70px; background: var(--bg-raised); color: var(--text); border: 1px solid var(--panel-border); font: inherit; font-size: 12px; padding: 3px 6px; margin-left: 6px; }
   #d-floor-out { margin-top: 4px; color: var(--text); }
+  #d-floor-out .floorHead { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 6px 0 2px; }
 </style>
 </head>
 <body>
@@ -138,7 +139,7 @@
   <main class="grid" id="grid"></main>
 
   <footer>
-    <p>Data comes from the game's <code>master_item</code> table, and the uses from <code>master_part_research</code>: a piece is listed under a material if developing it or any of its upgrade levels needs that material. Where to find: an item with a loot group can come out of the treasure boxes, Treasure Tubers, Haters and mini bosses that <code>master_floor_drop_gen</code> gives that group on a floor; the percentage is the chance that one box or enemy of that kind gives this item there (the group's weight over the total, split evenly when a group holds several items), shown as a range where floors or areas differ. Pickups are the items lying around a floor (<code>master_floor.itemgenid</code> and <code>master_item_gen</code>); their percentage is the item's share of that floor's pickup list. First floor is the lowest floor any of these reach. In Tengoku, large and special treasure boxes, Treasure Tubers and mini bosses only appear on the boss floors (every fifth floor), while Haters and medium boxes appear on every floor. Each Tengoku floor also has alternative layouts with their own loot tables, which is why some chances are ranges. Check a floor in an item's details gives the exact chances on one floor. Shops, the Hernia Vending Machine, quests, reward boxes, Lost Bags and Jackals are listed as well. Skillshrooms are also crafting materials; they are on the Mushrooms page.</p>
+    <p>Data comes from the game's <code>master_item</code> table, and the uses from <code>master_part_research</code>: a piece is listed under a material if developing it or any of its upgrade levels needs that material. Where to find: an item with a loot group can come out of the treasure boxes, Treasure Tubers, Haters and mini bosses that <code>master_floor_drop_gen</code> gives that group on a floor; the percentage is the chance that one box or enemy of that kind gives this item there (the group's weight over the total, split evenly when a group holds several items), shown as a range where floors or areas differ. Pickups are the items lying around a floor (<code>master_floor.itemgenid</code> and <code>master_item_gen</code>); their percentage is the item's share of that floor's pickup list. First floor is the lowest floor any of these reach. In Tengoku, large and special treasure boxes, Treasure Tubers and mini bosses only appear on the boss floors (every fifth floor), while Haters and medium boxes appear on every floor. Tengoku has the regular TENGOKU route (51F-451F) and four NEO routes (D.O.D, W.E, C.W and M.I.L.K, 52F-140F) that you pick between, each with its own loot tables, so chances are given per route. A Tengoku boss floor picks one of several side rooms at random with weights the data gives (<code>master_ref_area_setting</code>); its chances are averaged over those rooms with those weights. A Tower floor is made of separate named areas with their own loot tables; where they differ the chance is a range, and Check a floor lists each area. Shops, the Hernia Vending Machine, quests, reward boxes, Lost Bags and Jackals are listed as well. Skillshrooms are also crafting materials; they are on the Mushrooms page.</p>
     <p>Unofficial fan page. LET IT DIE and its artwork belong to their respective rights holders.</p>
   </footer>
 </div>
@@ -181,65 +182,95 @@ for (const p of GEAR.gear) for (const how of ['craft', 'upgrade']) for (const [m
   const u = USED[mid] = USED[mid] || new Map(); u.set(p.id, u.has(p.id) ? 'both' : how);
 }
 const uses = d => USED[d.id] ? USED[d.id].size : 0;
-// Where to find. Each source is a list of runs [first floor, last floor, step, low %, high %]: floors spaced by
-// <step> (1 = every floor, 5 = Tengoku's boss floors) with the same odds. A range of odds means the floor's areas or
-// its alternative layouts differ.
+// Where to find. Each source gives, per route, runs [first floor, last floor, step, low %, high %]: floors spaced by
+// <step> (1 = every floor, 5 = boss floors) with the same chance. Routes: 'main' is the Tower and regular TENGOKU,
+// R00-R03 the four NEO routes of Tengoku (52F-140F), which the player picks. A low-high pair only remains where a
+// Tower floor's separate areas differ; those are listed by area name ([route][floor] -> [[area, %], ...]).
 const TOWER = 50;
+const ROUTE = { R00: 'D.O.D', R01: 'W.E', R02: 'C.W', R03: 'M.I.L.K' };
 const SRC_TYPE = { TRBOX_S: ['Small treasure box', 'box'], TRBOX_M: ['Medium treasure box', 'box'], TRBOX_L: ['Large treasure box', 'box'],
   SPM: ['Special treasure box (medium)', 'box'], SPL: ['Special treasure box (large)', 'box'], SPXL: ['Special treasure box (extra large)', 'box'],
   TRBOX_SPXL_RARE: ['Rare special treasure box', 'box'], TRZAKO: ['Treasure Tuber', 'Tuber'], HATER_L: ['Hater (large drop)', 'Hater'], HATER_M: ['Hater (medium drop)', 'Hater'],
   MBOSS1: ['COEN', 'kill'], MBOSS2: ['JIN-DIE', 'kill'], MBOSS3: ['GOTO-9', 'kill'], MBOSS4: ['U-10', 'kill'] };
 const pctText = (lo, hi) => { const f = x => x >= 10 ? Math.round(x) : x >= 1 ? Math.round(x * 10) / 10 : x; return lo === hi ? `${f(lo)}%` : `${f(lo)}–${f(hi)}%`; };
-// "Tengoku boss floors 55–450" / "Tengoku 52–451" / "Floors 4–7, 9": where a run list reaches, in words (odds ignored)
-function floorWords(rs, tengoku) {
+const runHas = ([a, b, st], n) => a <= n && n <= b && (n - a) % st === 0;
+// floors reached by a run list, in words: "Floors 31–40", "boss floors 55–450 (every 5th floor)", "52–140"
+function floorWords(rs) {
   const fl = [];
   for (const [a, b, st] of rs) for (let n = a; n <= b; n += st) fl.push(n);
   fl.sort((x, y) => x - y);
-  const spans = [];      // runs of consecutive floors, or of floors 5 apart
+  const spans = [];
   for (const n of fl) {
     const last = spans[spans.length - 1];
     if (last && (n - last.b === (last.st || n - last.b)) && (n - last.b === 1 || n - last.b === 5)) { last.st = n - last.b; last.b = n; }
     else spans.push({ a: n, b: n, st: 0 });
   }
   const part = ({ a, b }) => a === b ? String(a) : `${a}–${b}`;
-  if (tengoku && fl.every(n => n % 5 === 0)) return `Tengoku boss floors ${spans.map(part).join(', ')} <span class="sub">(every 5th floor)</span>`;
-  return (tengoku ? 'Tengoku ' : fl.length === 1 ? 'Floor ' : 'Floors ') + spans.map(x => part(x) + (x.st === 5 ? ' (every 5th floor)' : '')).join(', ');
+  if (fl[0] > TOWER && fl.every(n => n % 5 === 0)) return `boss floors ${spans.map(part).join(', ')} <span class="sub">(every 5th floor)</span>`;
+  return spans.map(x => part(x) + (x.st === 5 ? ' (every 5th floor)' : '')).join(', ');
 }
-// The sources of an item as rows {label, unit, runs}; the four mini bosses become one row when they match.
+// The sources of an item as table rows {label, unit, where, runs, area}: one row per source and place (the Tower,
+// regular TENGOKU, the NEO routes). Rows that match (same place, floors and chances) are merged: the NEO routes
+// into one row when they agree, and the mini bosses into one row.
 function srcRows(d) {
-  const s = d.src || {}, out = [];
-  if (s.pickup) out.push({ label: 'Lying around on the floor', unit: 'pickup', runs: s.pickup });
-  const minis = (s.loot || []).filter(([t]) => /^MBOSS/.test(t));
-  const same = minis.length > 1 && minis.every(([, r]) => JSON.stringify(r) === JSON.stringify(minis[0][1]));
-  for (const [t, runs] of s.loot || []) {
-    if (/^MBOSS/.test(t) && same) { if (t === minis[0][0]) out.push({ label: 'Mini bosses: ' + minis.map(([x]) => SRC_TYPE[x][0]).join(', '), unit: 'kill', runs }); continue; }
-    const [label, unit] = SRC_TYPE[t] || [t, 'drop'];
-    out.push({ label: /^MBOSS/.test(t) ? label + ' (mini boss)' : label, unit, runs });
+  const s = d.src || {}, rows = [];
+  const add = (key, label, unit, routes, areas) => {
+    const main = routes.main || [];
+    const tower = main.filter(r => r[0] <= TOWER), teng = main.filter(r => r[0] > TOWER);
+    if (tower.length) rows.push({ key, label, unit, place: 'tower', routes: ['main'], runs: tower, areas: (areas || {}).main });
+    if (teng.length) rows.push({ key, label, unit, place: 'tengoku', routes: ['main'], runs: teng });
+    for (const r of Object.keys(ROUTE)) if (routes[r]) rows.push({ key, label, unit, place: 'neo', routes: [r], runs: routes[r] });
+  };
+  if (s.pickup) add('pickup', 'Lying around on the floor', 'pickup', s.pickup[0], s.pickup[1]);
+  for (const [t, routes, areas] of s.loot || []) { const [label, unit] = SRC_TYPE[t] || [t, 'drop']; add(t, label, unit, routes, areas); }
+  // merge rows of the same source and place whose floors and chances match (the NEO routes, usually)
+  const merged = [];
+  for (const r of rows) {
+    const m = merged.find(x => x.key === r.key && x.place === r.place && JSON.stringify(x.runs) === JSON.stringify(r.runs));
+    if (m) m.routes = m.routes.concat(r.routes); else merged.push(Object.assign({}, r));
   }
-  return out;
-}
-function rowCells(r) {
-  const cells = [];
-  for (const tengoku of [false, true]) {
-    const rs = r.runs.filter(([a]) => tengoku ? a > TOWER : a <= TOWER);
-    if (!rs.length) continue;
-    cells.push(`<tr><td>${esc(r.label)}</td><td>${floorWords(rs, tengoku)}</td><td>${pctText(Math.min(...rs.map(x => x[3])), Math.max(...rs.map(x => x[4])))} per ${r.unit}</td></tr>`);
+  // then the mini bosses: one row per place when their floors and chances match
+  const out = [];
+  for (const r of merged) {
+    const boss = /^MBOSS/.test(r.key);
+    const m = boss && out.find(x => /^MBOSS/.test(x.key) && x.place === r.place && JSON.stringify(x.runs) === JSON.stringify(r.runs));
+    if (m) { m.bosses.push([SRC_TYPE[r.key][0], r.routes]); m.routes = m.routes.concat(r.routes); }
+    else out.push(Object.assign({}, r, boss ? { bosses: [[SRC_TYPE[r.key][0], r.routes]] } : {}));
   }
-  return cells.join('');
+  for (const r of out) {
+    if (r.bosses) r.label = r.bosses.length === 1 ? r.bosses[0][0] + ' (mini boss)'
+      : r.place === 'neo' ? 'Each route\'s mini boss: ' + r.bosses.map(([n, rt]) => `${n} (${rt.map(x => ROUTE[x]).join(', ')})`).join(', ')
+      : 'Mini bosses: ' + r.bosses.map(([n]) => n).join(', ');
+    r.where = r.place === 'tower' ? 'Tower floors ' + floorWords(r.runs)
+      : r.place === 'tengoku' ? 'TENGOKU ' + floorWords(r.runs)
+      : `NEO ${[...new Set(r.routes)].map(x => ROUTE[x]).join(', ')} route${new Set(r.routes).size > 1 ? 's' : ''}: ` + floorWords(r.runs);
+  }
+  const order = { tower: 0, tengoku: 1, neo: 2 };
+  return out.sort((x, y) => order[x.place] - order[y.place]);
 }
 function srcHtml(d) {
   const rows = srcRows(d), other = (d.src && d.src.other) || [];
   if (!rows.length && !other.length) return 'None in the game data';
-  return (rows.length ? `<table class="src"><tr><th>From</th><th>Where</th><th>Chance</th></tr>${rows.map(rowCells).join('')}</table>` : '') +
+  const cell = r => pctText(Math.min(...r.runs.map(x => x[3])), Math.max(...r.runs.map(x => x[4]))) + ` per ${r.unit}`;
+  return (rows.length ? `<table class="src"><tr><th>From</th><th>Where</th><th>Chance</th></tr>${rows.map(r => `<tr><td>${esc(r.label)}</td><td>${r.where}</td><td>${cell(r)}</td></tr>`).join('')}</table><div class="sub">A range is the lowest and highest chance over those floors; Check a floor gives the exact chance on one floor.</div>` : '') +
     (other.length ? `<div class="srcOther">${other.map(esc).join('<br>')}</div>` : '') +
     (rows.length ? `<div class="srcFloor"><label>Check a floor <input type="number" id="d-floor" min="1" max="451" placeholder="floor"></label><div id="d-floor-out"></div></div>` : '');
 }
-// exact sources and odds on one floor
+// exact sources and chances on one floor, per place; a Tower floor whose areas differ lists them by name
 function onFloorHtml(d, n) {
-  const hits = srcRows(d).map(r => [r, r.runs.find(([a, b, st]) => a <= n && n <= b && (n - a) % st === 0)]).filter(([, x]) => x);
-  return hits.length ? hits.map(([r, x]) => `${esc(r.label)}: ${pctText(x[3], x[4])} per ${r.unit}`).join('<br>') : `Not found on floor ${n}.`;
+  const out = { tower: [], tengoku: [], neo: [] };
+  for (const r of srcRows(d)) {
+    const run = r.runs.find(x => runHas(x, n));
+    if (!run) continue;
+    const areas = r.areas && r.areas[n];
+    const chance = areas ? areas.map(([a, p]) => `${esc(a)} ${pctText(p, p)}`).join(', ') : pctText(run[3], run[4]);
+    out[r.place].push(`${esc(r.label)}${r.place === 'neo' ? ` <span class="sub">(NEO ${[...new Set(r.routes)].map(x => ROUTE[x]).join(', ')})</span>` : ''}: ${chance} per ${r.unit}`);
+  }
+  const parts = [['tower', `Floor ${n}`], ['tengoku', `TENGOKU ${n}F`], ['neo', `NEO routes ${n}F`]].filter(([k]) => out[k].length)
+    .map(([k, h]) => `<div class="floorHead">${h}</div>${out[k].join('<br>')}`);
+  return parts.length ? parts.join('') : `Not found on floor ${n}.`;
 }
-const onFloor = (d, n) => srcRows(d).some(r => r.runs.some(([a, b, st]) => a <= n && n <= b && (n - a) % st === 0));
+const onFloor = (d, n) => srcRows(d).some(r => r.runs.some(x => runHas(x, n)));
 const state = { q: '', rarity: '', floor: '', sort: 'game', open: null };
 let list = [];
 function renderGrid() {

@@ -292,6 +292,51 @@ for r in rows('select type, drop_item_id_1, drop_item_1_rate, drop_item_id_2, dr
 _uncap = {r['i'] for r in rows('select item1id as i from master_bodylvl_limit_break_item union select item2id from master_bodylvl_limit_break_item '
                                'union select item3id from master_bodylvl_limit_break_item union select item4id from master_bodylvl_limit_break_item')}
 
+# Route-aware odds for materials. Tengoku has the regular route (HVN_FLR_0001.., 51F-451F) and four NEO routes
+# (HVN_FLR_R00_..R03_, 52F-140F) that the player picks; each has its own loot tables, so odds are kept per route.
+# A boss floor's side room (refareaid) is picked at random with the weights in master_ref_area_setting, so the odds
+# over those rooms are averaged with those weights. What is left as a range is a floor's separate areas (Tower
+# floors have several named areas), which the per-floor check lists by name.
+ROUTE_OF = lambda fid: (re.match(r'HVN_FLR_(R0\d)_', fid) or [None, 'main'])[1] if fid.startswith('HVN') else 'main'
+_flr_area_name = {}
+for r in rows("select id, no, areaid, name from master_floor where no > 0"):
+    _flr_area_name[(r['id'], r['areaid'])] = clean(tx(r['name']) or '') if r['name'] else ''
+_room_w = {}
+for r in rows('select areaid, refareaid, freq from master_ref_area_setting where freq > 0'): _room_w[(r['areaid'], r['refareaid'])] = r['freq']
+_drop_rows2 = rows('select flrid, areaid, refareaid, type, grp, freq from master_floor_drop_gen where freq > 0')
+_tot2 = {}
+for r in _drop_rows2: _tot2[(r['flrid'], r['areaid'], r['refareaid'], r['type'])] = _tot2.get((r['flrid'], r['areaid'], r['refareaid'], r['type']), 0) + r['freq']
+_rooms = {}     # (flrid, areaid, type) -> {refareaid: weight}
+for (f, a, ra, t) in _tot2: _rooms.setdefault((f, a, t), {})[ra] = _room_w.get((a, ra), 100) if ra != '-' else 100
+_area_pct = {}  # grp -> type -> (route, floor) -> {area name: %}
+for r in _drop_rows2:
+    if r['grp'] < 50 or r['type'] not in BP_KIND or r['flrid'] not in _flr_no: continue
+    rooms = _rooms[(r['flrid'], r['areaid'], r['type'])]; wsum = sum(rooms.values())
+    pct = 100.0 * r['freq'] / _tot2[(r['flrid'], r['areaid'], r['refareaid'], r['type'])] / _grp_size.get(r['grp'], 1) * rooms[r['refareaid']] / wsum
+    key = (ROUTE_OF(r['flrid']), _flr_no[r['flrid']]); name = _flr_area_name.get((r['flrid'], r['areaid']), '') or r['areaid']
+    d = _area_pct.setdefault(r['grp'], {}).setdefault(r['type'], {}).setdefault(key, {})
+    d[name] = d.get(name, 0) + pct
+_pick2 = {}     # item -> (route, floor) -> {area name: %}
+for r in rows("select id, no, areaid, itemgenid from master_floor where no > 0 and itemgenid != ''"):
+    lst = _gen.get(r['itemgenid'], []); tot = sum(w for _, w in lst)
+    for it, w in lst:
+        d = _pick2.setdefault(it, {}).setdefault((ROUTE_OF(r['id']), r['no']), {})
+        name = _flr_area_name.get((r['id'], r['areaid']), '') or r['areaid']; d[name] = 100.0 * w / tot
+ROUTES = ['main', 'R00', 'R01', 'R02', 'R03']
+
+def route_runs(per):
+    """(route, floor) -> {area: %} as {route: runs}, runs as in runs() (low and high over the floor's areas), plus the
+    areas where a floor's areas differ: {route: {floor: [[area, %], ...]}}."""
+    out, areas = {}, {}
+    for route in ROUTES:
+        fl = {no: v for (rt, no), v in per.items() if rt == route}
+        if not fl: continue
+        out[route] = runs({no: (min(v.values()), max(v.values())) for no, v in fl.items()})
+        split = {no: sorted([[a, _pct(p)] for a, p in v.items()], key=lambda x: -x[1]) for no, v in fl.items()
+                 if len(v) > 1 and _pct(min(v.values())) != _pct(max(v.values()))}
+        if split: areas[route] = split
+    return out, areas
+
 def runs(per):
     """Floor -> (low %, high %) as runs [first, last, step, low %, high %]: floors spaced by the same step (1 for every
     floor, 5 for Tengoku's boss floors) whose odds are the same, rounded as shown. The Tower (1-50) and Tengoku never share a run."""
@@ -310,12 +355,15 @@ def mat_sources(item, grp):
     """{'loot': [[type, runs], ...], 'pickup': runs, 'first': floor, 'other': [...], 'uncap': True}; runs as in runs()."""
     out = {}
     order = list(BP_KIND); floors = set()
-    if grp and grp in _grp_odds:
-        out['loot'] = [[typ[8:], runs(per)] for typ, per in sorted(_grp_odds[grp].items(), key=lambda kv: order.index(kv[0]))]
-        for per in _grp_odds[grp].values(): floors.update(per)
-    if item in _pick:
-        per = _pick[item]; floors.update(per)
-        out['pickup'] = runs(per)
+    if grp and grp in _area_pct:
+        out['loot'] = []
+        for typ, per in sorted(_area_pct[grp].items(), key=lambda kv: order.index(kv[0])):
+            r, areas = route_runs(per)
+            out['loot'].append([typ[8:], r] + ([areas] if areas else []))
+            floors.update(no for _, no in per)
+    if item in _pick2:
+        r, areas = route_runs(_pick2[item]); floors.update(no for _, no in _pick2[item])
+        out['pickup'] = [r] + ([areas] if areas else [])
     if floors: out['first'] = min(floors)
     if item in _mat_other: out['other'] = _mat_other[item]
     if item in _uncap: out['uncap'] = True
