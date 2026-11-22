@@ -260,12 +260,14 @@ function srcRows(d) {
   }
   for (const r of out) {
     if (r.place === 'arena') r.label = `Arena reward (${r.label.toLowerCase()})`;
+    r.reward = r.place === 'arena' || (r.key === 'TRBOX_L' && r.place !== 'tower' && r.runs.every(([a, b, st]) => a % 5 === 0 && (a === b || st % 5 === 0)));
+    if (r.reward && r.place !== 'arena') r.label = 'Boss fight reward (large treasure box)';
     if (r.bosses) r.label = r.bosses.length === 1 ? r.bosses[0][0] + ' (mini boss)'
       : r.place === 'neo' ? 'Each route\'s mini boss: ' + r.bosses.map(([n, rt]) => `${n} (${rt.map(x => ROUTE[x]).join(', ')})`).join(', ')
       : 'Mini bosses: ' + r.bosses.map(([n]) => n).join(', ');
     r.where = r.place === 'arena' ? arenaWords(r.runs) : r.place === 'tower' ? (r.runs.length === 1 && r.runs[0][0] === r.runs[0][1] ? 'Tower floor ' : 'Tower floors ') + floorWords(r.runs)
-      : r.place === 'tengoku' ? 'TENGOKU ' + floorWords(r.runs)
-      : `NEO ${[...new Set(r.routes)].map(x => ROUTE[x]).join(', ')} route${new Set(r.routes).size > 1 ? 's' : ''}: ` + floorWords(r.runs);
+      : r.place === 'tengoku' ? 'TENGOKU ' + (r.reward ? 'after the boss fight on floors ' + floorWords(r.runs).replace(/^boss floors /, '') : floorWords(r.runs))
+      : `NEO ${[...new Set(r.routes)].map(x => ROUTE[x]).join(', ')} route${new Set(r.routes).size > 1 ? 's' : ''}: ` + (r.reward ? 'after the boss fight on floors ' + floorWords(r.runs).replace(/^boss floors /, '') : floorWords(r.runs));
   }
   const order = { arena: 0, tower: 1, tengoku: 2, neo: 3 };
   return out.sort((x, y) => order[x.place] - order[y.place]);
@@ -282,7 +284,7 @@ function srcHtml(d) {
   const cell = r => pctText(Math.min(...r.runs.map(x => x[3])), Math.max(...r.runs.map(x => x[4]))) + ` per ${r.unit}`;
   return (rows.length ? `<table class="src"><tr><th>From</th><th>Where</th><th>Chance</th></tr>${rows.map(r => `<tr><td>${esc(r.label)}</td><td>${r.where}</td><td>${cell(r)}</td></tr>`).join('')}</table><div class="sub">A range is the lowest and highest chance over those floors; Check a floor gives the exact chance on one floor.</div>` : '') +
     (other.length ? `<div class="srcOther">${other.map(esc).join('<br>')}</div>` : '') +
-    (rows.some(r => r.place !== 'arena') ? `<div class="srcFloor"><label>Check a floor <input type="number" id="d-floor" min="1" max="451" placeholder="floor"></label><div id="d-floor-out"></div></div>` : '');
+    (rows.some(r => !r.reward) ? `<div class="srcFloor"><label>Check a floor <input type="number" id="d-floor" min="1" max="451" placeholder="floor"></label><div id="d-floor-out"></div></div>` : '');
 }
 // exact sources and chances on one floor, per place; a Tower floor whose areas differ lists them by name
 function onFloorHtml(d, n) {
